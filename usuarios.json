@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "usuario": "admin",
+    "nome": "Administrador",
+    "sobrenome": "Sistema",
+    "email": "davicaina10@gmail.com",
+    "telefone": "11999999999",
+    "senha": "$2b$10$Wvl/L6E6P63zluQHTiNI6.ssKaQ1ji/xQSB75M.tymN//rhO3M0Xi",
+    "tipo": "administrador",
+    "status": "aprovado",
+    "ativo": true,
+    "dataCriacao": "2024-01-15T10:00:00.000Z",
+    "ultimoLogin": "2025-07-28T12:08:45.486Z",
+    "senhaConvertidaEm": "2025-07-27T22:49:48.779Z",
+    "senhaOriginalEra": "1574569810"
+  },
+  {
+    "id": "mdlayvain3xqsj",
+    "usuario": "Castiel",
+    "senha": "$2b$10$AYgPJLC78tdapcaeqvta1elkrWmUS3q5GOg3rpkIYqaEideUkSWcq",
+    "nome": "Davi",
+    "sobrenome": "Cainã",
+    "email": "davicainabc@gmail.com",
+    "telefone": "5521982244802",
+    "tipo": "aluno",
+    "status": "aprovado",
+    "ativo": true,
+    "dataCriacao": "2025-07-27T06:33:13.524Z"
+  },
+  {
+    "id": "mdpnt7wnr7y8t8",
+    "usuario": "teste",
+    "senha": "$2b$10$SeAM4oPjbG6DJzP0HSvF6ehuZAOHRJmO7Gaqs4lfpbmrmarRQibZu",
+    "nome": "teste",
+    "sobrenome": "teste",
+    "email": "teste@gmail.com",
+    "telefone": "21999999999",
+    "tipo": "aluno",
+    "status": "aprovado",
+    "ativo": true,
+    "dataCriacao": "2025-07-30T07:43:49.439Z",
+    "dataAprovacao": "2025-07-30T07:44:34.984Z",
+    "aprovadoPor": "admin",
+    "fotoBase64": null
+  }
+]

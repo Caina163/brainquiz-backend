@@ -1,0 +1,27 @@
+[
+  {
+    "titulo": "123",
+    "nome": "123",
+    "imagem": null,
+    "imagemBase64": null,
+    "perguntas": [
+      {
+        "texto": "123",
+        "imagem": null,
+        "alternativas": [
+          "123",
+          "321",
+          "321"
+        ],
+        "resposta_certa": 0
+      }
+    ],
+    "configuracoes": {
+      "criadoEm": "2025-07-30T06:02:41.209Z",
+      "editadoEm": "2025-07-30T06:02:41.209Z"
+    },
+    "id": "mdpk75q9pu0vhi",
+    "criadoPor": "admin",
+    "dataCriacao": "2025-07-30T06:02:41.217Z"
+  }
+]
