@@ -12,52 +12,50 @@ const PORT = process.env.PORT || 3000;
 const DADOS_DIR = path.join(__dirname, 'dados');
 const USUARIOS_FILE = path.join(DADOS_DIR, 'usuarios.json');
 const QUIZZES_FILE = path.join(DADOS_DIR, 'quizzes.json');
-const QUIZZES_ARQUIVADOS_FILE = path.join(DADOS_DIR, 'quizzes_arquivados.json');
-const QUIZZES_EXCLUIDOS_FILE = path.join(DADOS_DIR, 'quizzes_excluidos.json');
-const PDFS_FILE = path.join(DADOS_DIR, 'pdfs.json');
-const PDFS_EXCLUIDOS_FILE = path.join(DADOS_DIR, 'pdfs_excluidos.json');
 const CADASTROS_FILE = path.join(DADOS_DIR, 'cadastros.json');
 
-// MIDDLEWARE CORS CORRIGIDO
+// CORS CORRIGIDO COM SUA URL DO NETLIFY
 app.use(cors({
   origin: [
+    'https://brainquiiz.netlify.app',           // ← SUA URL CORRETA
     'https://brainquiz-frontend.vercel.app', 
     'https://brainquiz.netlify.app',
-    'https://brainquiiz.netlify.app/',        // ← SUBSTITUA ESTA LINHA
     'http://localhost:3000', 
     'http://127.0.0.1:3000',
     'http://localhost:5500',
     'http://127.0.0.1:5500'
   ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-// Middleware para parsear JSON
+// Middleware
 app.use(express.json({limit: '50mb'}));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// CONFIGURAÇÃO DE SESSÃO CORRIGIDA
+// Sessão
 app.use(session({
   secret: 'brainquiz-secret-2025-super-secure-final',
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: false, // Para desenvolvimento (mudar para true em produção HTTPS)
+    secure: false,
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 horas
+    maxAge: 24 * 60 * 60 * 1000
   },
   name: 'brainquiz.session'
 }));
 
-// Verificar e criar diretório de dados
+// Criar diretório de dados
 if (!fs.existsSync(DADOS_DIR)) {
   fs.mkdirSync(DADOS_DIR, { recursive: true });
   console.log('📁 Diretório dados/ criado');
 }
 
-// MIDDLEWARE DE AUTENTICAÇÃO CORRIGIDO
+// Middleware de autenticação
 function checkAuth(req, res, next) {
   console.log('🔐 Verificando autenticação...');
-  console.log('Session ID:', req.sessionID);
-  console.log('Session data:', req.session?.usuario ? 'Usuário presente' : 'Sem usuário');
   
   if (req.session && req.session.usuario && req.session.usuario.usuario) {
     console.log('✅ Usuário autenticado:', req.session.usuario.usuario);
@@ -72,15 +70,6 @@ function checkAuth(req, res, next) {
   }
 }
 
-// MIDDLEWARE PARA PERMISSÕES
-function checkAdmin(req, res, next) {
-  if (req.session.usuario && req.session.usuario.tipo === 'administrador') {
-    next();
-  } else {
-    res.status(403).json({ success: false, message: 'Acesso negado. Apenas administrador.' });
-  }
-}
-
 function checkAdminOrModerator(req, res, next) {
   if (req.session.usuario && (req.session.usuario.tipo === 'administrador' || req.session.usuario.tipo === 'moderador')) {
     next();
@@ -89,7 +78,17 @@ function checkAdminOrModerator(req, res, next) {
   }
 }
 
-// ROTA DE STATUS DO SERVIDOR
+function checkAdmin(req, res, next) {
+  if (req.session.usuario && req.session.usuario.tipo === 'administrador') {
+    next();
+  } else {
+    res.status(403).json({ success: false, message: 'Acesso negado. Apenas administrador.' });
+  }
+}
+
+// ROTAS
+
+// Status
 app.get('/', (req, res) => {
   res.json({
     success: true,
@@ -107,11 +106,7 @@ app.get('/status', (req, res) => {
   });
 });
 
-// ===========================================
-// ROTAS DE AUTENTICAÇÃO
-// ===========================================
-
-// LOGIN FINAL CORRIGIDO
+// LOGIN
 app.post('/login', async (req, res) => {
   console.log('🔑 Tentativa de login:', { usuario: req.body.usuario });
   
@@ -144,10 +139,8 @@ app.post('/login', async (req, res) => {
     let senhaValida = false;
     
     if (user.senha && user.senha.startsWith('$2b$')) {
-      // Senha com hash bcrypt
       senhaValida = await bcrypt.compare(senha, user.senha);
     } else {
-      // Senha em texto simples (compatibilidade)
       senhaValida = (senha === user.senha);
     }
 
@@ -166,7 +159,7 @@ app.post('/login', async (req, res) => {
       return res.json({ success: false, message: 'Usuário inativo' });
     }
 
-    // CRIAR SESSÃO
+    // Criar sessão
     req.session.usuario = {
       id: user.id,
       usuario: user.usuario,
@@ -178,7 +171,6 @@ app.post('/login', async (req, res) => {
       fotoBase64: user.fotoBase64 || null
     };
 
-    // Salvar sessão
     req.session.save((err) => {
       if (err) {
         console.error('❌ Erro ao salvar sessão:', err);
@@ -186,7 +178,6 @@ app.post('/login', async (req, res) => {
       }
 
       console.log('✅ Login bem-sucedido:', user.usuario, user.tipo);
-      console.log('Session salva:', req.sessionID);
 
       res.json({ 
         success: true, 
@@ -202,75 +193,9 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// CADASTRO CORRIGIDO
-app.post('/cadastro', async (req, res) => {
-  console.log('📝 Novo cadastro pendente:', req.body);
-  
-  const { usuario, senha, nome, sobrenome, email, telefone, celular } = req.body;
-
-  if (!usuario || !senha || !nome || !email) {
-    return res.json({ success: false, message: 'Campos obrigatórios: usuário, senha, nome e email' });
-  }
-
-  try {
-    // Verificar se já existe nos usuários aprovados
-    const usuarios = lerJSON(USUARIOS_FILE);
-    if (usuarios.find(u => u.usuario === usuario)) {
-      return res.json({ success: false, message: 'Este usuário já existe' });
-    }
-
-    if (usuarios.find(u => u.email === email)) {
-      return res.json({ success: false, message: 'Este email já está em uso' });
-    }
-
-    // Verificar se já existe nos cadastros pendentes
-    const cadastrosPendentes = lerJSON(CADASTROS_FILE);
-    if (cadastrosPendentes.find(c => c.usuario === usuario)) {
-      return res.json({ success: false, message: 'Este usuário já possui um cadastro pendente' });
-    }
-
-    if (cadastrosPendentes.find(c => c.email === email)) {
-      return res.json({ success: false, message: 'Este email já possui um cadastro pendente' });
-    }
-
-    // Criar cadastro pendente
-    const novoCadastro = {
-      id: gerarId(),
-      usuario: usuario.trim(),
-      senha: await bcrypt.hash(senha, 10),
-      nome: nome.trim(),
-      sobrenome: (sobrenome || '').trim(),
-      email: email.trim(),
-      telefone: telefone || celular || '',
-      tipo: 'aluno',
-      status: 'pendente',
-      ativo: false,
-      dataCriacao: new Date().toISOString(),
-      fotoBase64: null
-    };
-
-    cadastrosPendentes.push(novoCadastro);
-    salvarJSON(CADASTROS_FILE, cadastrosPendentes);
-
-    console.log('✅ Cadastro pendente criado:', usuario);
-    
-    res.json({ 
-      success: true, 
-      message: 'Cadastro enviado para aprovação!',
-      needsApproval: true
-    });
-    
-  } catch (error) {
-    console.error('❌ Erro no cadastro:', error);
-    res.json({ success: false, message: 'Erro interno do servidor' });
-  }
-});
-
 // VERIFICAR USUÁRIO LOGADO
 app.get('/usuario', (req, res) => {
   console.log('🔍 Verificando usuário da sessão...');
-  console.log('Session ID:', req.sessionID);
-  console.log('Session user:', req.session?.usuario?.usuario);
   
   if (req.session && req.session.usuario) {
     console.log('✅ Usuário encontrado na sessão:', req.session.usuario.usuario);
@@ -303,11 +228,68 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// ===========================================
-// API DE DADOS
-// ===========================================
+// CADASTRO
+app.post('/cadastro', async (req, res) => {
+  console.log('📝 Novo cadastro pendente:', req.body);
+  
+  const { usuario, senha, nome, sobrenome, email, telefone, celular } = req.body;
 
-// LISTAR USUÁRIOS
+  if (!usuario || !senha || !nome || !email) {
+    return res.json({ success: false, message: 'Campos obrigatórios: usuário, senha, nome e email' });
+  }
+
+  try {
+    const usuarios = lerJSON(USUARIOS_FILE);
+    if (usuarios.find(u => u.usuario === usuario)) {
+      return res.json({ success: false, message: 'Este usuário já existe' });
+    }
+
+    if (usuarios.find(u => u.email === email)) {
+      return res.json({ success: false, message: 'Este email já está em uso' });
+    }
+
+    const cadastrosPendentes = lerJSON(CADASTROS_FILE);
+    if (cadastrosPendentes.find(c => c.usuario === usuario)) {
+      return res.json({ success: false, message: 'Este usuário já possui um cadastro pendente' });
+    }
+
+    if (cadastrosPendentes.find(c => c.email === email)) {
+      return res.json({ success: false, message: 'Este email já possui um cadastro pendente' });
+    }
+
+    const novoCadastro = {
+      id: gerarId(),
+      usuario: usuario.trim(),
+      senha: await bcrypt.hash(senha, 10),
+      nome: nome.trim(),
+      sobrenome: (sobrenome || '').trim(),
+      email: email.trim(),
+      telefone: telefone || celular || '',
+      tipo: 'aluno',
+      status: 'pendente',
+      ativo: false,
+      dataCriacao: new Date().toISOString(),
+      fotoBase64: null
+    };
+
+    cadastrosPendentes.push(novoCadastro);
+    salvarJSON(CADASTROS_FILE, cadastrosPendentes);
+
+    console.log('✅ Cadastro pendente criado:', usuario);
+    
+    res.json({ 
+      success: true, 
+      message: 'Cadastro enviado para aprovação!',
+      needsApproval: true
+    });
+    
+  } catch (error) {
+    console.error('❌ Erro no cadastro:', error);
+    res.json({ success: false, message: 'Erro interno do servidor' });
+  }
+});
+
+// API USUÁRIOS
 app.get('/api/usuarios', checkAuth, (req, res) => {
   try {
     const usuarios = lerJSON(USUARIOS_FILE).filter(u => u.status === 'aprovado');
@@ -318,10 +300,9 @@ app.get('/api/usuarios', checkAuth, (req, res) => {
   }
 });
 
-// LISTAR CADASTROS PENDENTES
+// API CADASTROS
 app.get('/api/cadastros', checkAuth, (req, res) => {
   try {
-    // Verificar permissão
     if (!['administrador', 'moderador'].includes(req.session.usuario.tipo)) {
       return res.status(403).json({ success: false, message: 'Acesso negado' });
     }
@@ -341,7 +322,6 @@ app.post('/api/cadastros/:id/aprovar', checkAuth, (req, res) => {
   console.log('✅ Aprovando cadastro ID:', cadastroId);
   
   try {
-    // Verificar permissão
     if (!['administrador', 'moderador'].includes(req.session.usuario.tipo)) {
       return res.status(403).json({ success: false, message: 'Acesso negado' });
     }
@@ -355,13 +335,12 @@ app.post('/api/cadastros/:id/aprovar', checkAuth, (req, res) => {
 
     const cadastro = cadastros[cadastroIdx];
     
-    // Mover para usuários
     let usuarios = lerJSON(USUARIOS_FILE);
     
     const novoUsuario = {
       id: cadastro.id,
       usuario: cadastro.usuario,
-      senha: cadastro.senha, // Já está hasheada
+      senha: cadastro.senha,
       nome: cadastro.nome,
       sobrenome: cadastro.sobrenome,
       email: cadastro.email,
@@ -396,7 +375,6 @@ app.delete('/api/cadastros/:id', checkAuth, (req, res) => {
   console.log('❌ Rejeitando cadastro ID:', cadastroId);
   
   try {
-    // Verificar permissão
     if (!['administrador', 'moderador'].includes(req.session.usuario.tipo)) {
       return res.status(403).json({ success: false, message: 'Acesso negado' });
     }
@@ -420,6 +398,60 @@ app.delete('/api/cadastros/:id', checkAuth, (req, res) => {
   }
 });
 
+// API QUIZZES
+app.get('/api/quizzes', checkAuth, (req, res) => {
+  try {
+    const quizzes = lerJSON(QUIZZES_FILE);
+    res.json({ success: true, quizzes });
+  } catch (error) {
+    console.error('❌ Erro ao listar quizzes:', error);
+    res.json({ success: false, message: 'Erro ao carregar quizzes' });
+  }
+});
+
+// SALVAR QUIZ
+app.post('/api/quizzes', checkAuth, checkAdminOrModerator, (req, res) => {
+  try {
+    const quiz = req.body;
+
+    if (!quiz || !quiz.nome || !quiz.perguntas || !Array.isArray(quiz.perguntas)) {
+      return res.json({ success: false, message: 'Dados do quiz incompletos' });
+    }
+
+    const quizzes = lerJSON(QUIZZES_FILE);
+
+    if (quiz.id) {
+      const idx = quizzes.findIndex(q => q.id === quiz.id);
+      if (idx !== -1) {
+        quizzes[idx] = {
+          ...quiz,
+          dataModificacao: new Date().toISOString(),
+          modificadoPor: req.session.usuario.usuario
+        };
+        salvarJSON(QUIZZES_FILE, quizzes);
+        return res.json({ success: true, message: 'Quiz atualizado com sucesso' });
+      }
+    }
+
+    if (quizzes.some(q => q.nome === quiz.nome)) {
+      return res.json({ success: false, message: 'Já existe um quiz com este nome' });
+    }
+
+    quiz.id = gerarId();
+    quiz.criadoPor = req.session.usuario.usuario;
+    quiz.dataCriacao = new Date().toISOString();
+
+    quizzes.push(quiz);
+    salvarJSON(QUIZZES_FILE, quizzes);
+
+    res.json({ success: true, message: 'Quiz salvo com sucesso' });
+    
+  } catch (error) {
+    console.error('❌ Erro ao salvar quiz:', error);
+    res.json({ success: false, message: 'Erro interno do servidor' });
+  }
+});
+
 // EDITAR USUÁRIO
 app.put('/api/usuarios/:usuario', checkAuth, checkAdminOrModerator, async (req, res) => {
   const usuarioTarget = req.params.usuario;
@@ -432,14 +464,12 @@ app.put('/api/usuarios/:usuario', checkAuth, checkAdminOrModerator, async (req, 
     return res.json({ success: false, message: 'Usuário não encontrado' });
   }
 
-  // Verificar permissões para alterar tipo
   if (tipo && usuarios[idx].tipo !== tipo) {
     if (req.session.usuario.tipo !== 'administrador') {
       return res.json({ success: false, message: 'Apenas administradores podem alterar o tipo de usuário' });
     }
   }
 
-  // Atualizar dados
   if (nome) usuarios[idx].nome = nome;
   if (sobrenome !== undefined) usuarios[idx].sobrenome = sobrenome;
   if (email) usuarios[idx].email = email;
@@ -450,7 +480,7 @@ app.put('/api/usuarios/:usuario', checkAuth, checkAdminOrModerator, async (req, 
   res.json({ success: true, message: 'Usuário atualizado com sucesso' });
 });
 
-// ALTERAR ROLE (PROMOVER/REBAIXAR)
+// ALTERAR ROLE
 app.post('/alterar-role', checkAuth, checkAdmin, async (req, res) => {
   const { usuario, role } = req.body;
   
@@ -505,62 +535,6 @@ app.post('/excluir-usuario', checkAuth, checkAdmin, (req, res) => {
   res.json({ success: true, message: 'Usuário excluído com sucesso' });
 });
 
-// LISTAR QUIZZES
-app.get('/api/quizzes', checkAuth, (req, res) => {
-  try {
-    const quizzes = lerJSON(QUIZZES_FILE);
-    res.json({ success: true, quizzes });
-  } catch (error) {
-    console.error('❌ Erro ao listar quizzes:', error);
-    res.json({ success: false, message: 'Erro ao carregar quizzes' });
-  }
-});
-
-// SALVAR QUIZ
-app.post('/api/quizzes', checkAuth, checkAdminOrModerator, (req, res) => {
-  try {
-    const quiz = req.body;
-
-    if (!quiz || !quiz.nome || !quiz.perguntas || !Array.isArray(quiz.perguntas)) {
-      return res.json({ success: false, message: 'Dados do quiz incompletos' });
-    }
-
-    const quizzes = lerJSON(QUIZZES_FILE);
-
-    // Se é edição
-    if (quiz.id) {
-      const idx = quizzes.findIndex(q => q.id === quiz.id);
-      if (idx !== -1) {
-        quizzes[idx] = {
-          ...quiz,
-          dataModificacao: new Date().toISOString(),
-          modificadoPor: req.session.usuario.usuario
-        };
-        salvarJSON(QUIZZES_FILE, quizzes);
-        return res.json({ success: true, message: 'Quiz atualizado com sucesso' });
-      }
-    }
-
-    // Novo quiz
-    if (quizzes.some(q => q.nome === quiz.nome)) {
-      return res.json({ success: false, message: 'Já existe um quiz com este nome' });
-    }
-
-    quiz.id = gerarId();
-    quiz.criadoPor = req.session.usuario.usuario;
-    quiz.dataCriacao = new Date().toISOString();
-
-    quizzes.push(quiz);
-    salvarJSON(QUIZZES_FILE, quizzes);
-
-    res.json({ success: true, message: 'Quiz salvo com sucesso' });
-    
-  } catch (error) {
-    console.error('❌ Erro ao salvar quiz:', error);
-    res.json({ success: false, message: 'Erro interno do servidor' });
-  }
-});
-
 // ATUALIZAR PERFIL
 app.put('/api/perfil', checkAuth, async (req, res) => {
   const { nome, sobrenome, email, telefone, fotoBase64, senhaAtual } = req.body;
@@ -576,7 +550,6 @@ app.put('/api/perfil', checkAuth, async (req, res) => {
     return res.json({ success: false, message: 'Usuário não encontrado' });
   }
 
-  // Verificar senha atual
   const user = usuarios[idx];
   let senhaValida = false;
   
@@ -594,7 +567,6 @@ app.put('/api/perfil', checkAuth, async (req, res) => {
     return res.json({ success: false, message: 'Senha atual incorreta' });
   }
 
-  // Atualizar dados
   if (nome) usuarios[idx].nome = nome;
   if (sobrenome !== undefined) usuarios[idx].sobrenome = sobrenome;
   if (email) usuarios[idx].email = email;
@@ -603,7 +575,6 @@ app.put('/api/perfil', checkAuth, async (req, res) => {
 
   salvarJSON(USUARIOS_FILE, usuarios);
 
-  // Atualizar sessão
   req.session.usuario = {
     ...req.session.usuario,
     nome: usuarios[idx].nome,
@@ -616,10 +587,7 @@ app.put('/api/perfil', checkAuth, async (req, res) => {
   res.json({ success: true, message: 'Perfil atualizado com sucesso' });
 });
 
-// ===========================================
 // FUNÇÕES AUXILIARES
-// ===========================================
-
 function lerJSON(caminho) {
   try {
     if (!fs.existsSync(caminho)) {
@@ -646,7 +614,7 @@ function gerarId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
-// Middleware de erro 404
+// 404
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -655,15 +623,11 @@ app.use((req, res) => {
   });
 });
 
-// ===========================================
-// INICIALIZAÇÃO DO SERVIDOR
-// ===========================================
-
+// INICIALIZAÇÃO
 app.listen(PORT, async () => {
   console.log('🚀 Servidor BrainQuiz FINAL rodando na porta:', PORT);
   console.log('🔗 URL:', `http://localhost:${PORT}`);
   
-  // Criar usuário admin se não existir
   try {
     let usuarios = lerJSON(USUARIOS_FILE);
     
@@ -691,7 +655,6 @@ app.listen(PORT, async () => {
       console.log('✅ Admin criado: admin / 1574569810');
     }
     
-    // Estatísticas
     const usuariosAtivos = usuarios.filter(u => u.status === 'aprovado' && u.ativo);
     const cadastrosPendentes = lerJSON(CADASTROS_FILE);
     const quizzes = lerJSON(QUIZZES_FILE);
@@ -706,10 +669,7 @@ app.listen(PORT, async () => {
     console.log('');
     console.log('🔑 LOGIN DE TESTE: admin / 1574569810');
     console.log('✅ Sistema FINAL funcionando perfeitamente!');
-    console.log('🔧 Sessões configuradas corretamente');
-    console.log('🌐 CORS configurado para produção e desenvolvimento');
-    console.log('🛡️ Todas as permissões implementadas');
-    console.log('📱 Compatível com dispositivos móveis');
+    console.log('🌐 CORS configurado para: https://brainquiiz.netlify.app');
     
   } catch (error) {
     console.error('❌ Erro na inicialização:', error);
