@@ -72,30 +72,11 @@ function checkAdminOrModerator(req, res, next) {
   }
 }
 
-// Serve arquivos estáticos da pasta public
-app.use(express.static(path.join(__dirname, 'public')));
-
-// ===========================================
-// ROTAS PÚBLICAS (SEM AUTENTICAÇÃO) - CORRIGIDAS
-// ===========================================
-
-// ROTA PRINCIPAL - SEMPRE REDIRECIONA PARA LOGIN
+// ROTA PRINCIPAL - APENAS MENSAGEM DE STATUS
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.send('🚀 API BrainQuiz está ativa e rodando na Render!');
 });
 
-// ROTAS DE LOGIN E CADASTRO
-app.get('/index.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/login.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/cadastro.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'cadastro.html'));
-});
 
 // ===========================================
 // ROTAS PROTEGIDAS (COM AUTENTICAÇÃO)
