@@ -1,0 +1,32 @@
+{
+  "name": "brainquiz-system",
+  "version": "1.0.0",
+  "description": "Sistema completo de Quiz com autenticação e gerenciamento de usuários",
+  "main": "index/index.js",
+  "scripts": {
+    "start": "node index/index.js",
+    "dev": "nodemon index/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "quiz",
+    "express",
+    "nodejs",
+    "authentication",
+    "education"
+  ],
+  "author": "Desenvolvedor Quiz",
+  "license": "MIT",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "express-session": "^1.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
