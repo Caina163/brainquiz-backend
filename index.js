@@ -537,7 +537,7 @@ app.post('/excluir-usuario', checkAuth, checkAdmin, (req, res) => {
 
 // ATUALIZAR PERFIL
 app.put('/api/perfil', checkAuth, async (req, res) => {
-  const { nome, sobrenome, email, telefone, fotoBase64, senhaAtual } = req.body;
+  const { nome, sobrenome, email, telefone, fotoBase64, senhaAtual, novaSenha } = req.body;
   
   if (!senhaAtual) {
     return res.json({ success: false, message: 'Senha atual é obrigatória para salvar alterações' });
@@ -567,14 +567,22 @@ app.put('/api/perfil', checkAuth, async (req, res) => {
     return res.json({ success: false, message: 'Senha atual incorreta' });
   }
 
+  // Atualizar dados do perfil
   if (nome) usuarios[idx].nome = nome;
   if (sobrenome !== undefined) usuarios[idx].sobrenome = sobrenome;
   if (email) usuarios[idx].email = email;
   if (telefone !== undefined) usuarios[idx].telefone = telefone;
   if (fotoBase64 !== undefined) usuarios[idx].fotoBase64 = fotoBase64;
 
+  // Alterar senha se fornecida
+  if (novaSenha && novaSenha.trim() !== '') {
+    usuarios[idx].senha = await bcrypt.hash(novaSenha, 10);
+    console.log('🔑 Senha alterada para o usuário:', req.session.usuario.usuario);
+  }
+
   salvarJSON(USUARIOS_FILE, usuarios);
 
+  // Atualizar sessão
   req.session.usuario = {
     ...req.session.usuario,
     nome: usuarios[idx].nome,
@@ -631,29 +639,32 @@ app.listen(PORT, async () => {
   try {
     let usuarios = lerJSON(USUARIOS_FILE);
     
-    let adminExiste = usuarios.find(u => u.usuario === 'admin');
+    // 🔧 CORREÇÃO: FORÇAR RECRIAÇÃO DO ADMIN COM SENHA CORRETA
+    console.log('🔄 Verificando e corrigindo admin...');
     
-    if (!adminExiste) {
-      console.log('📝 Criando usuário admin inicial...');
-      const novoAdmin = {
-        id: Date.now(),
-        usuario: 'admin',
-        nome: 'Administrador',
-        sobrenome: 'Sistema',
-        email: 'admin@brainquiz.com',
-        telefone: '11999999999',
-        senha: await bcrypt.hash('1574569810', 10),
-        tipo: 'administrador',
-        status: 'aprovado',
-        ativo: true,
-        dataCriacao: new Date().toISOString(),
-        fotoBase64: null
-      };
-      
-      usuarios.push(novoAdmin);
-      salvarJSON(USUARIOS_FILE, usuarios);
-      console.log('✅ Admin criado: admin / 1574569810');
-    }
+    // Remove admin existente (se houver)
+    usuarios = usuarios.filter(u => u.usuario !== 'admin');
+    
+    // Cria admin com senha correta
+    console.log('📝 Criando usuário admin com senha correta...');
+    const novoAdmin = {
+      id: Date.now(),
+      usuario: 'admin',
+      nome: 'Administrador',
+      sobrenome: 'Sistema',
+      email: 'admin@brainquiz.com',
+      telefone: '11999999999',
+      senha: await bcrypt.hash('1574569810', 10),
+      tipo: 'administrador',
+      status: 'aprovado',
+      ativo: true,
+      dataCriacao: new Date().toISOString(),
+      fotoBase64: null
+    };
+    
+    usuarios.push(novoAdmin);
+    salvarJSON(USUARIOS_FILE, usuarios);
+    console.log('✅ Admin recriado: admin / 1574569810');
     
     const usuariosAtivos = usuarios.filter(u => u.status === 'aprovado' && u.ativo);
     const cadastrosPendentes = lerJSON(CADASTROS_FILE);
@@ -667,7 +678,7 @@ app.listen(PORT, async () => {
     console.log('│ Quizzes disponíveis     │', quizzes.length.toString().padStart(7), '│');
     console.log('└─────────────────────────┴─────────┘');
     console.log('');
-    console.log('🔑 LOGIN DE TESTE: admin / 1574569810');
+    console.log('🔑 LOGIN CORRETO: admin / 1574569810');
     console.log('✅ Sistema FINAL funcionando perfeitamente!');
     console.log('🌐 CORS configurado para: https://brainquiiz.netlify.app');
     
