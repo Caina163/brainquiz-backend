@@ -979,7 +979,7 @@ app.listen(PORT, async () => {
       sobrenome: 'Sistema',
       email: 'admin@brainquiz.com',
       telefone: '11999999999',
-      senha: await bcrypt.hash('admin123', 10),
+   senha: await bcrypt.hash('1574569810', 10),
       tipo: 'administrador',
       status: 'aprovado',
       ativo: true,
