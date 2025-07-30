@@ -21,17 +21,11 @@ const CADASTROS_FILE = path.join(DADOS_DIR, 'cadastros.json');
 // MIDDLEWARE CORS CORRIGIDO
 app.use(cors({
   origin: [
-    'https://brainquiz-frontend.vercel.app', 
+    'https://brainquiiz.netlify.app',      // ← SUA URL DO NETLIFY
     'https://brainquiz.netlify.app',
-    'https://your-site.netlify.app',
-    'http://localhost:3000', 
-    'http://127.0.0.1:3000',
-    'http://localhost:5500',
-    'http://127.0.0.1:5500'
+    'http://localhost:3000'
   ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  credentials: true
 }));
 
 // Middleware para parsear JSON
