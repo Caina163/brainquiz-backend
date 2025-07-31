@@ -18,6 +18,7 @@ const CADASTROS_FILE = path.join(DADOS_DIR, 'cadastros.json');
 app.use(cors({
   origin: [
     'https://brainquiiz.netlify.app',           // ← SUA URL CORRETA
+    'http://brainquiiz.netlify.app',            // ← ADICIONADO para garantir
     'https://brainquiz-frontend.vercel.app', 
     'https://brainquiz.netlify.app',
     'http://localhost:3000', 
@@ -402,49 +403,110 @@ app.delete('/api/cadastros/:id', checkAuth, (req, res) => {
 app.get('/api/quizzes', checkAuth, (req, res) => {
   try {
     const quizzes = lerJSON(QUIZZES_FILE);
-    res.json({ success: true, quizzes });
+    
+    // Garantir compatibilidade dos campos para todos os quizzes
+    const quizzesCompativeis = quizzes.map(quiz => ({
+      ...quiz,
+      nome: quiz.nome || quiz.titulo,
+      titulo: quiz.titulo || quiz.nome,
+      perguntas: quiz.perguntas ? quiz.perguntas.map(p => ({
+        ...p,
+        alternativas: p.alternativas || p.opcoes,
+        opcoes: p.opcoes || p.alternativas,
+        resposta_certa: p.resposta_certa !== undefined ? p.resposta_certa : p.respostaCorreta,
+        respostaCorreta: p.respostaCorreta !== undefined ? p.respostaCorreta : p.resposta_certa
+      })) : []
+    }));
+    
+    res.json({ success: true, quizzes: quizzesCompativeis });
   } catch (error) {
     console.error('❌ Erro ao listar quizzes:', error);
     res.json({ success: false, message: 'Erro ao carregar quizzes' });
   }
 });
 
-// SALVAR QUIZ
+// BUSCAR QUIZ POR ID - NOVO ENDPOINT ADICIONADO
+app.get('/api/quizzes/:id', checkAuth, (req, res) => {
+  try {
+    const quizId = req.params.id;
+    const quizzes = lerJSON(QUIZZES_FILE);
+    const quiz = quizzes.find(q => q.id == quizId);
+    
+    if (!quiz) {
+      return res.json({ success: false, message: 'Quiz não encontrado' });
+    }
+    
+    // Garantir compatibilidade dos campos
+    const quizCompativel = {
+      ...quiz,
+      nome: quiz.nome || quiz.titulo,
+      titulo: quiz.titulo || quiz.nome,
+      perguntas: quiz.perguntas ? quiz.perguntas.map(p => ({
+        ...p,
+        alternativas: p.alternativas || p.opcoes,
+        opcoes: p.opcoes || p.alternativas,
+        resposta_certa: p.resposta_certa !== undefined ? p.resposta_certa : p.respostaCorreta,
+        respostaCorreta: p.respostaCorreta !== undefined ? p.respostaCorreta : p.resposta_certa
+      })) : []
+    };
+    
+    res.json({ success: true, quiz: quizCompativel });
+  } catch (error) {
+    console.error('❌ Erro ao buscar quiz:', error);
+    res.json({ success: false, message: 'Erro interno do servidor' });
+  }
+});
+
+// SALVAR QUIZ - VERSÃO CORRIGIDA
 app.post('/api/quizzes', checkAuth, checkAdminOrModerator, (req, res) => {
   try {
     const quiz = req.body;
 
-    if (!quiz || !quiz.nome || !quiz.perguntas || !Array.isArray(quiz.perguntas)) {
+    if (!quiz || (!quiz.nome && !quiz.titulo) || !quiz.perguntas || !Array.isArray(quiz.perguntas)) {
       return res.json({ success: false, message: 'Dados do quiz incompletos' });
     }
 
     const quizzes = lerJSON(QUIZZES_FILE);
 
-    if (quiz.id) {
-      const idx = quizzes.findIndex(q => q.id === quiz.id);
+    // Garantir compatibilidade de campos
+    const quizFinal = {
+      ...quiz,
+      nome: quiz.nome || quiz.titulo,
+      titulo: quiz.titulo || quiz.nome,
+      perguntas: quiz.perguntas.map(p => ({
+        ...p,
+        alternativas: p.alternativas || p.opcoes,
+        opcoes: p.opcoes || p.alternativas,
+        resposta_certa: p.resposta_certa !== undefined ? p.resposta_certa : (p.respostaCorreta || 0),
+        respostaCorreta: p.respostaCorreta !== undefined ? p.respostaCorreta : (p.resposta_certa || 0)
+      }))
+    };
+
+    if (quizFinal.id) {
+      const idx = quizzes.findIndex(q => q.id === quizFinal.id);
       if (idx !== -1) {
         quizzes[idx] = {
-          ...quiz,
+          ...quizFinal,
           dataModificacao: new Date().toISOString(),
           modificadoPor: req.session.usuario.usuario
         };
         salvarJSON(QUIZZES_FILE, quizzes);
-        return res.json({ success: true, message: 'Quiz atualizado com sucesso' });
+        return res.json({ success: true, message: 'Quiz atualizado com sucesso', quiz: quizzes[idx] });
       }
     }
 
-    if (quizzes.some(q => q.nome === quiz.nome)) {
+    if (quizzes.some(q => (q.nome === quizFinal.nome || q.titulo === quizFinal.titulo))) {
       return res.json({ success: false, message: 'Já existe um quiz com este nome' });
     }
 
-    quiz.id = gerarId();
-    quiz.criadoPor = req.session.usuario.usuario;
-    quiz.dataCriacao = new Date().toISOString();
+    quizFinal.id = gerarId();
+    quizFinal.criadoPor = req.session.usuario.usuario;
+    quizFinal.dataCriacao = new Date().toISOString();
 
-    quizzes.push(quiz);
+    quizzes.push(quizFinal);
     salvarJSON(QUIZZES_FILE, quizzes);
 
-    res.json({ success: true, message: 'Quiz salvo com sucesso' });
+    res.json({ success: true, message: 'Quiz salvo com sucesso', quiz: quizFinal });
     
   } catch (error) {
     console.error('❌ Erro ao salvar quiz:', error);
