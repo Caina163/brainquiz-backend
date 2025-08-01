@@ -325,7 +325,7 @@ app.get('/api/cadastros', checkAuth, (req, res) => {
           sessionSaved: true,
           cookiesEnabled: true
         }
-      });
+      };
     });
 
   } catch (error) {
