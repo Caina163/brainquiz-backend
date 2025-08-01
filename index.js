@@ -17,8 +17,8 @@ const CADASTROS_FILE = path.join(DADOS_DIR, 'cadastros.json');
 // CORS CORRIGIDO COM SUA URL DO NETLIFY
 app.use(cors({
   origin: [
-    'https://brainquiiz.netlify.app',           // ← SUA URL CORRETA
-    'http://brainquiiz.netlify.app',            // ← ADICIONADO para garantir
+    'https://brainquiiz.netlify.app',
+    'http://brainquiiz.netlify.app',
     'https://brainquiz-frontend.vercel.app', 
     'https://brainquiz.netlify.app',
     'http://localhost:3000', 
@@ -26,9 +26,10 @@ app.use(cors({
     'http://localhost:5500',
     'http://127.0.0.1:5500'
   ],
-  credentials: true,
+  credentials: true,              // ✅ CORRETO
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'], // ✅ ADICIONAR Cookie
+  exposedHeaders: ['Set-Cookie']  // ✅ ADICIONAR: Expor cookies para o frontend
 }));
 
 // Middleware
@@ -41,9 +42,10 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: false,
+    secure: true,
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: 'none'   
   },
   name: 'brainquiz.session'
 }));
@@ -110,6 +112,8 @@ app.get('/status', (req, res) => {
 // LOGIN
 app.post('/login', async (req, res) => {
   console.log('🔑 Tentativa de login:', { usuario: req.body.usuario });
+  console.log('📋 Session antes do login:', req.session);
+  console.log('📋 Session ID antes:', req.sessionID);
   
   const { usuario, senha } = req.body;
 
@@ -137,7 +141,7 @@ app.post('/login', async (req, res) => {
     });
 
     // Verificar senha
-    let senhaValida = false;
+      let senhaValida = false;
     
     if (user.senha && user.senha.startsWith('$2b$')) {
       senhaValida = await bcrypt.compare(senha, user.senha);
@@ -161,7 +165,7 @@ app.post('/login', async (req, res) => {
     }
 
     // Criar sessão
-    req.session.usuario = {
+     req.session.usuario = {
       id: user.id,
       usuario: user.usuario,
       tipo: user.tipo,
@@ -172,31 +176,16 @@ app.post('/login', async (req, res) => {
       fotoBase64: user.fotoBase64 || null
     };
 
-    req.session.save((err) => {
-      if (err) {
-        console.error('❌ Erro ao salvar sessão:', err);
-        return res.json({ success: false, message: 'Erro interno do servidor' });
-      }
+    console.log('📝 Dados da sessão criados:', req.session.usuario);
+    console.log('📋 Session ID após login:', req.sessionID);
 
-      console.log('✅ Login bem-sucedido:', user.usuario, user.tipo);
-
-      res.json({ 
-        success: true, 
-        message: 'Login realizado com sucesso',
-        usuario: req.session.usuario,
-        sessionId: req.sessionID
-      });
-    });
-
-  } catch (error) {
-    console.error('❌ Erro no login:', error);
-    res.json({ success: false, message: 'Erro interno do servidor' });
-  }
-});
 
 // VERIFICAR USUÁRIO LOGADO
 app.get('/usuario', (req, res) => {
   console.log('🔍 Verificando usuário da sessão...');
+  console.log('📋 Session ID:', req.sessionID);
+  console.log('📋 Session data:', req.session);
+  console.log('📋 Cookies recebidos:', req.headers.cookie);
   
   if (req.session && req.session.usuario) {
     console.log('✅ Usuário encontrado na sessão:', req.session.usuario.usuario);
@@ -206,10 +195,18 @@ app.get('/usuario', (req, res) => {
     });
   } else {
     console.log('❌ Nenhum usuário na sessão');
+    console.log('📋 Session exists:', !!req.session);
+    console.log('📋 Session.usuario exists:', !!req.session?.usuario);
+    
     res.status(401).json({
       success: false,
       message: 'Sessão não encontrada',
-      needsLogin: true
+      needsLogin: true,
+      debug: {
+        sessionExists: !!req.session,
+        sessionId: req.sessionID,
+        hasUser: !!req.session?.usuario
+      }
     });
   }
 });
@@ -218,16 +215,15 @@ app.get('/usuario', (req, res) => {
 app.post('/logout', (req, res) => {
   console.log('👋 Fazendo logout...');
   
-  req.session.destroy((err) => {
-    if (err) {
-      console.error('❌ Erro ao destruir sessão:', err);
-      return res.json({ success: false, message: 'Erro ao fazer logout' });
-    }
-    
-    console.log('✅ Logout realizado');
-    res.json({ success: true, message: 'Logout realizado com sucesso' });
-  });
-});
+   req.session.save((err) => {
+      if (err) {
+        console.error('❌ Erro ao salvar sessão:', err);
+        return res.json({ success: false, message: 'Erro interno do servidor' });
+      }
+
+      console.log('✅ Sessão salva com sucesso');
+      console.log('📋 Session após save:', req.session);
+      console.log('✅ Login bem-sucedido:', user.usuario, user.tipo);
 
 // CADASTRO
 app.post('/cadastro', async (req, res) => {
@@ -315,6 +311,47 @@ app.get('/api/cadastros', checkAuth, (req, res) => {
     console.error('❌ Erro ao listar cadastros:', error);
     res.json({ success: false, message: 'Erro ao carregar cadastros' });
   }
+});
+
+ // ✅ ADICIONAR: Headers para garantir que o cookie seja definido
+      res.header('Access-Control-Allow-Credentials', 'true');
+      
+      res.json({ 
+        success: true, 
+        message: 'Login realizado com sucesso',
+        usuario: req.session.usuario,
+        sessionId: req.sessionID,
+        debug: {
+          sessionSaved: true,
+          cookiesEnabled: true
+        }
+      });
+    });
+
+  } catch (error) {
+    console.error('❌ Erro no login:', error);
+    res.json({ success: false, message: 'Erro interno do servidor' });
+  }
+});
+
+// 🔧 ADICIONAR: Middleware de debug para todas as rotas
+app.use((req, res, next) => {
+  console.log(`📡 ${req.method} ${req.path}`);
+  console.log('🍪 Cookies:', req.headers.cookie);
+  console.log('📋 Session ID:', req.sessionID);
+  console.log('👤 Session User:', req.session?.usuario?.usuario || 'não logado');
+  next();
+});
+
+// 🔧 ADICIONAR: Endpoint de debug
+app.get('/debug/session', (req, res) => {
+  res.json({
+    sessionId: req.sessionID,
+    session: req.session,
+    cookies: req.headers.cookie,
+    usuario: req.session?.usuario || null,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // APROVAR CADASTRO
