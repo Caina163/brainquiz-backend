@@ -14,22 +14,21 @@ const USUARIOS_FILE = path.join(DADOS_DIR, 'usuarios.json');
 const QUIZZES_FILE = path.join(DADOS_DIR, 'quizzes.json');
 const CADASTROS_FILE = path.join(DADOS_DIR, 'cadastros.json');
 
-// CORS CORRIGIDO COM SUA URL DO NETLIFY
+// CORS configurado para suas URLs
 app.use(cors({
   origin: [
     'https://brainquiiz.netlify.app',
     'http://brainquiiz.netlify.app',
-    'https://brainquiz-frontend.vercel.app', 
-    'https://brainquiz.netlify.app',
+    'https://brainquiz-backend.onrender.com',
     'http://localhost:3000', 
     'http://127.0.0.1:3000',
     'http://localhost:5500',
     'http://127.0.0.1:5500'
   ],
-  credentials: true,              // ✅ CORRETO
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'], // ✅ ADICIONAR Cookie
-  exposedHeaders: ['Set-Cookie']  // ✅ ADICIONAR: Expor cookies para o frontend
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  exposedHeaders: ['Set-Cookie']
 }));
 
 // Middleware
@@ -42,10 +41,10 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: true,
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000,
-    sameSite: 'none'   
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
   },
   name: 'brainquiz.session'
 }));
@@ -55,6 +54,15 @@ if (!fs.existsSync(DADOS_DIR)) {
   fs.mkdirSync(DADOS_DIR, { recursive: true });
   console.log('📁 Diretório dados/ criado');
 }
+
+// Middleware de debug para todas as rotas
+app.use((req, res, next) => {
+  console.log(`📡 ${req.method} ${req.path}`);
+  console.log('🍪 Cookies:', req.headers.cookie);
+  console.log('📋 Session ID:', req.sessionID);
+  console.log('👤 Session User:', req.session?.usuario?.usuario || 'não logado');
+  next();
+});
 
 // Middleware de autenticação
 function checkAuth(req, res, next) {
@@ -109,6 +117,17 @@ app.get('/status', (req, res) => {
   });
 });
 
+// Endpoint de debug
+app.get('/debug/session', (req, res) => {
+  res.json({
+    sessionId: req.sessionID,
+    session: req.session,
+    cookies: req.headers.cookie,
+    usuario: req.session?.usuario || null,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // LOGIN
 app.post('/login', async (req, res) => {
   console.log('🔑 Tentativa de login:', { usuario: req.body.usuario });
@@ -141,7 +160,7 @@ app.post('/login', async (req, res) => {
     });
 
     // Verificar senha
-      let senhaValida = false;
+    let senhaValida = false;
     
     if (user.senha && user.senha.startsWith('$2b$')) {
       senhaValida = await bcrypt.compare(senha, user.senha);
@@ -165,7 +184,7 @@ app.post('/login', async (req, res) => {
     }
 
     // Criar sessão
-     req.session.usuario = {
+    req.session.usuario = {
       id: user.id,
       usuario: user.usuario,
       tipo: user.tipo,
@@ -179,6 +198,37 @@ app.post('/login', async (req, res) => {
     console.log('📝 Dados da sessão criados:', req.session.usuario);
     console.log('📋 Session ID após login:', req.sessionID);
 
+    // Salvar sessão e responder
+    req.session.save((err) => {
+      if (err) {
+        console.error('❌ Erro ao salvar sessão:', err);
+        return res.json({ success: false, message: 'Erro interno do servidor' });
+      }
+
+      console.log('✅ Sessão salva com sucesso');
+      console.log('📋 Session após save:', req.session);
+      console.log('✅ Login bem-sucedido:', user.usuario, user.tipo);
+
+      // Headers para garantir que o cookie seja definido
+      res.header('Access-Control-Allow-Credentials', 'true');
+      
+      res.json({ 
+        success: true, 
+        message: 'Login realizado com sucesso',
+        usuario: req.session.usuario,
+        sessionId: req.sessionID,
+        debug: {
+          sessionSaved: true,
+          cookiesEnabled: true
+        }
+      });
+    });
+
+  } catch (error) {
+    console.error('❌ Erro no login:', error);
+    res.json({ success: false, message: 'Erro interno do servidor' });
+  }
+});
 
 // VERIFICAR USUÁRIO LOGADO
 app.get('/usuario', (req, res) => {
@@ -215,15 +265,21 @@ app.get('/usuario', (req, res) => {
 app.post('/logout', (req, res) => {
   console.log('👋 Fazendo logout...');
   
-   req.session.save((err) => {
+  if (req.session) {
+    req.session.destroy((err) => {
       if (err) {
-        console.error('❌ Erro ao salvar sessão:', err);
-        return res.json({ success: false, message: 'Erro interno do servidor' });
+        console.error('❌ Erro ao destruir sessão:', err);
+        return res.json({ success: false, message: 'Erro ao fazer logout' });
       }
-
-      console.log('✅ Sessão salva com sucesso');
-      console.log('📋 Session após save:', req.session);
-      console.log('✅ Login bem-sucedido:', user.usuario, user.tipo);
+      
+      res.clearCookie('brainquiz.session');
+      console.log('✅ Logout realizado com sucesso');
+      res.json({ success: true, message: 'Logout realizado com sucesso' });
+    });
+  } else {
+    res.json({ success: true, message: 'Nenhuma sessão ativa' });
+  }
+});
 
 // CADASTRO
 app.post('/cadastro', async (req, res) => {
@@ -311,47 +367,6 @@ app.get('/api/cadastros', checkAuth, (req, res) => {
     console.error('❌ Erro ao listar cadastros:', error);
     res.json({ success: false, message: 'Erro ao carregar cadastros' });
   }
-});
-
- // ✅ ADICIONAR: Headers para garantir que o cookie seja definido
-      res.header('Access-Control-Allow-Credentials', 'true');
-      
-      res.json({ 
-        success: true, 
-        message: 'Login realizado com sucesso',
-        usuario: req.session.usuario,
-        sessionId: req.sessionID,
-        debug: {
-          sessionSaved: true,
-          cookiesEnabled: true
-        }
-      };
-    });
-
-  } catch (error) {
-    console.error('❌ Erro no login:', error);
-    res.json({ success: false, message: 'Erro interno do servidor' });
-  }
-});
-
-// 🔧 ADICIONAR: Middleware de debug para todas as rotas
-app.use((req, res, next) => {
-  console.log(`📡 ${req.method} ${req.path}`);
-  console.log('🍪 Cookies:', req.headers.cookie);
-  console.log('📋 Session ID:', req.sessionID);
-  console.log('👤 Session User:', req.session?.usuario?.usuario || 'não logado');
-  next();
-});
-
-// 🔧 ADICIONAR: Endpoint de debug
-app.get('/debug/session', (req, res) => {
-  res.json({
-    sessionId: req.sessionID,
-    session: req.session,
-    cookies: req.headers.cookie,
-    usuario: req.session?.usuario || null,
-    timestamp: new Date().toISOString()
-  });
 });
 
 // APROVAR CADASTRO
@@ -462,7 +477,7 @@ app.get('/api/quizzes', checkAuth, (req, res) => {
   }
 });
 
-// BUSCAR QUIZ POR ID - NOVO ENDPOINT ADICIONADO
+// BUSCAR QUIZ POR ID
 app.get('/api/quizzes/:id', checkAuth, (req, res) => {
   try {
     const quizId = req.params.id;
@@ -494,7 +509,7 @@ app.get('/api/quizzes/:id', checkAuth, (req, res) => {
   }
 });
 
-// SALVAR QUIZ - VERSÃO CORRIGIDA
+// SALVAR QUIZ
 app.post('/api/quizzes', checkAuth, checkAdminOrModerator, (req, res) => {
   try {
     const quiz = req.body;
@@ -738,7 +753,7 @@ app.listen(PORT, async () => {
   try {
     let usuarios = lerJSON(USUARIOS_FILE);
     
-    // 🔧 CORREÇÃO: FORÇAR RECRIAÇÃO DO ADMIN COM SENHA CORRETA
+    // Verificando e corrigindo admin
     console.log('🔄 Verificando e corrigindo admin...');
     
     // Remove admin existente (se houver)
@@ -779,7 +794,9 @@ app.listen(PORT, async () => {
     console.log('');
     console.log('🔑 LOGIN CORRETO: admin / 1574569810');
     console.log('✅ Sistema FINAL funcionando perfeitamente!');
-    console.log('🌐 CORS configurado para: https://brainquiiz.netlify.app');
+    console.log('🌐 CORS configurado para:');
+    console.log('   - https://brainquiiz.netlify.app');
+    console.log('   - https://brainquiz-backend.onrender.com');
     
   } catch (error) {
     console.error('❌ Erro na inicialização:', error);
