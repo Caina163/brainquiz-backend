@@ -1,804 +1,382 @@
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
-const bcrypt = require('bcrypt');
-const session = require('express-session');
 const cors = require('cors');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'brainquiz-super-secret-key-2025';
 
-// Caminhos para arquivos de dados
-const DADOS_DIR = path.join(__dirname, 'dados');
-const USUARIOS_FILE = path.join(DADOS_DIR, 'usuarios.json');
-const QUIZZES_FILE = path.join(DADOS_DIR, 'quizzes.json');
-const CADASTROS_FILE = path.join(DADOS_DIR, 'cadastros.json');
-
-// CORS configurado para suas URLs
+// Configuração de CORS para produção
 app.use(cors({
-  origin: [
-    'https://brainquiiz.netlify.app',
-    'http://brainquiiz.netlify.app',
-    'https://brainquiz-backend.onrender.com',
-    'http://localhost:3000', 
-    'http://127.0.0.1:3000',
-    'http://localhost:5500',
-    'http://127.0.0.1:5500'
-  ],
+  origin: ['https://brainquiiz.netlify.app', 'http://localhost:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
-  exposedHeaders: ['Set-Cookie']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
 
-// Middleware
-app.use(express.json({limit: '50mb'}));
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // 100 requests por IP
+  message: { success: false, message: 'Muitas tentativas. Tente novamente em 15 minutos.' }
+});
+
+app.use(limiter);
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Sessão
-app.use(session({
-  secret: 'brainquiz-secret-2025-super-secure-final',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { 
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
-  },
-  name: 'brainquiz.session'
-}));
+// Configuração do multer para upload
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Apenas arquivos PDF são permitidos'));
+    }
+  }
+});
 
-// Criar diretório de dados
-if (!fs.existsSync(DADOS_DIR)) {
-  fs.mkdirSync(DADOS_DIR, { recursive: true });
-  console.log('📁 Diretório dados/ criado');
+// Função para ler arquivos JSON com fallback
+function lerArquivoJSON(nomeArquivo, defaultValue = []) {
+  try {
+    const caminho = path.join(__dirname, nomeArquivo);
+    if (fs.existsSync(caminho)) {
+      const conteudo = fs.readFileSync(caminho, 'utf8');
+      return JSON.parse(conteudo);
+    }
+  } catch (error) {
+    console.error(`Erro ao ler ${nomeArquivo}:`, error);
+  }
+  return defaultValue;
 }
 
-// Middleware de debug para todas as rotas
-app.use((req, res, next) => {
-  console.log(`📡 ${req.method} ${req.path}`);
-  console.log('🍪 Cookies:', req.headers.cookie);
-  console.log('📋 Session ID:', req.sessionID);
-  console.log('👤 Session User:', req.session?.usuario?.usuario || 'não logado');
-  next();
-});
+// Função para salvar arquivos JSON
+function salvarArquivoJSON(nomeArquivo, dados) {
+  try {
+    const caminho = path.join(__dirname, nomeArquivo);
+    fs.writeFileSync(caminho, JSON.stringify(dados, null, 2));
+    return true;
+  } catch (error) {
+    console.error(`Erro ao salvar ${nomeArquivo}:`, error);
+    return false;
+  }
+}
+
+// Função para gerar IDs únicos
+function gerarId() {
+  return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+}
 
 // Middleware de autenticação
-function checkAuth(req, res, next) {
-  console.log('🔐 Verificando autenticação...');
-  
-  if (req.session && req.session.usuario && req.session.usuario.usuario) {
-    console.log('✅ Usuário autenticado:', req.session.usuario.usuario);
-    next();
-  } else {
-    console.log('❌ Usuário não autenticado');
-    res.status(401).json({ 
-      success: false, 
-      message: 'Não autenticado',
-      needsLogin: true 
-    });
+function autenticarToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Token não fornecido' });
   }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ success: false, message: 'Token inválido' });
+    }
+    req.user = user;
+    next();
+  });
 }
 
-function checkAdminOrModerator(req, res, next) {
-  if (req.session.usuario && (req.session.usuario.tipo === 'administrador' || req.session.usuario.tipo === 'moderador')) {
-    next();
-  } else {
-    res.status(403).json({ success: false, message: 'Acesso negado. Apenas admin ou moderador.' });
-  }
-}
-
-function checkAdmin(req, res, next) {
-  if (req.session.usuario && req.session.usuario.tipo === 'administrador') {
-    next();
-  } else {
-    res.status(403).json({ success: false, message: 'Acesso negado. Apenas administrador.' });
-  }
-}
-
-// ROTAS
-
-// Status
-app.get('/', (req, res) => {
-  res.json({
-    success: true,
-    message: '🚀 API BrainQuiz Final ativa!',
-    timestamp: new Date().toISOString(),
-    version: '3.0.0'
-  });
-});
-
-app.get('/status', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Servidor online',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Endpoint de debug
-app.get('/debug/session', (req, res) => {
-  res.json({
-    sessionId: req.sessionID,
-    session: req.session,
-    cookies: req.headers.cookie,
-    usuario: req.session?.usuario || null,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// LOGIN
+// ROTA DE LOGIN CORRIGIDA
 app.post('/login', async (req, res) => {
-  console.log('🔑 Tentativa de login:', { usuario: req.body.usuario });
-  console.log('📋 Session antes do login:', req.session);
-  console.log('📋 Session ID antes:', req.sessionID);
-  
-  const { usuario, senha } = req.body;
-
-  if (!usuario || !senha) {
-    console.log('❌ Dados incompletos');
-    return res.json({ success: false, message: 'Usuário e senha são obrigatórios' });
-  }
-
   try {
-    const usuarios = lerJSON(USUARIOS_FILE);
-    console.log('📚 Total de usuários:', usuarios.length);
-    
-    const user = usuarios.find(u => u.usuario === usuario);
+    const { usuario, senha } = req.body;
 
-    if (!user) {
-      console.log('❌ Usuário não encontrado:', usuario);
-      return res.json({ success: false, message: 'Usuário não encontrado' });
+    if (!usuario || !senha) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Usuário e senha são obrigatórios' 
+      });
     }
 
-    console.log('👤 Usuário encontrado:', {
-      usuario: user.usuario,
-      tipo: user.tipo,
-      status: user.status,
-      ativo: user.ativo
-    });
+    // Carregar usuários do arquivo
+    const usuarios = lerArquivoJSON('usuarios.json', []);
+    const usuarioEncontrado = usuarios.find(u => u.usuario === usuario && u.ativo);
 
-    // Verificar senha
+    if (!usuarioEncontrado) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Usuário não encontrado' 
+      });
+    }
+
+    // Verificar senha - suportar tanto texto puro quanto hash
     let senhaValida = false;
     
-    if (user.senha && user.senha.startsWith('$2b$')) {
-      senhaValida = await bcrypt.compare(senha, user.senha);
+    if (usuarioEncontrado.senha.startsWith('$2b$')) {
+      // Senha hasheada com bcrypt
+      senhaValida = await bcrypt.compare(senha, usuarioEncontrado.senha);
     } else {
-      senhaValida = (senha === user.senha);
+      // Senha em texto puro (apenas para admin legado)
+      senhaValida = senha === usuarioEncontrado.senha;
+      
+      // IMPORTANTE: Converter senha do admin para hash na primeira execução
+      if (senhaValida && usuarioEncontrado.usuario === 'admin') {
+        const senhaHash = await bcrypt.hash(senha, 10);
+        usuarioEncontrado.senha = senhaHash;
+        usuarioEncontrado.senhaConvertidaEm = new Date().toISOString();
+        salvarArquivoJSON('usuarios.json', usuarios);
+      }
     }
 
     if (!senhaValida) {
-      console.log('❌ Senha incorreta');
-      return res.json({ success: false, message: 'Senha incorreta' });
-    }
-
-    if (user.status && user.status !== 'aprovado') {
-      console.log('❌ Usuário não aprovado:', user.status);
-      return res.json({ success: false, message: 'Aguardando aprovação do administrador' });
-    }
-
-    if (user.ativo === false) {
-      console.log('❌ Usuário inativo');
-      return res.json({ success: false, message: 'Usuário inativo' });
-    }
-
-    // Criar sessão
-    req.session.usuario = {
-      id: user.id,
-      usuario: user.usuario,
-      tipo: user.tipo,
-      nome: user.nome || '',
-      sobrenome: user.sobrenome || '',
-      email: user.email || '',
-      telefone: user.telefone || user.celular || '',
-      fotoBase64: user.fotoBase64 || null
-    };
-
-    console.log('📝 Dados da sessão criados:', req.session.usuario);
-    console.log('📋 Session ID após login:', req.sessionID);
-
-    // Salvar sessão e responder
-    req.session.save((err) => {
-      if (err) {
-        console.error('❌ Erro ao salvar sessão:', err);
-        return res.json({ success: false, message: 'Erro interno do servidor' });
-      }
-
-      console.log('✅ Sessão salva com sucesso');
-      console.log('📋 Session após save:', req.session);
-      console.log('✅ Login bem-sucedido:', user.usuario, user.tipo);
-
-      // Headers para garantir que o cookie seja definido
-      res.header('Access-Control-Allow-Credentials', 'true');
-      
-      res.json({ 
-        success: true, 
-        message: 'Login realizado com sucesso',
-        usuario: req.session.usuario,
-        sessionId: req.sessionID,
-        debug: {
-          sessionSaved: true,
-          cookiesEnabled: true
-        }
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Senha incorreta' 
       });
-    });
+    }
 
-  } catch (error) {
-    console.error('❌ Erro no login:', error);
-    res.json({ success: false, message: 'Erro interno do servidor' });
-  }
-});
+    // Atualizar último login
+    usuarioEncontrado.ultimoLogin = new Date().toISOString();
+    salvarArquivoJSON('usuarios.json', usuarios);
 
-// VERIFICAR USUÁRIO LOGADO
-app.get('/usuario', (req, res) => {
-  console.log('🔍 Verificando usuário da sessão...');
-  console.log('📋 Session ID:', req.sessionID);
-  console.log('📋 Session data:', req.session);
-  console.log('📋 Cookies recebidos:', req.headers.cookie);
-  
-  if (req.session && req.session.usuario) {
-    console.log('✅ Usuário encontrado na sessão:', req.session.usuario.usuario);
+    // Gerar token JWT
+    const token = jwt.sign(
+      { 
+        id: usuarioEncontrado.id,
+        usuario: usuarioEncontrado.usuario,
+        tipo: usuarioEncontrado.tipo 
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // Dados do usuário (sem senha)
+    const { senha: _, ...dadosUsuario } = usuarioEncontrado;
+
     res.json({
       success: true,
-      usuario: req.session.usuario
+      message: 'Login realizado com sucesso',
+      token,
+      usuario: dadosUsuario
     });
-  } else {
-    console.log('❌ Nenhum usuário na sessão');
-    console.log('📋 Session exists:', !!req.session);
-    console.log('📋 Session.usuario exists:', !!req.session?.usuario);
-    
-    res.status(401).json({
-      success: false,
-      message: 'Sessão não encontrada',
-      needsLogin: true,
-      debug: {
-        sessionExists: !!req.session,
-        sessionId: req.sessionID,
-        hasUser: !!req.session?.usuario
-      }
+
+  } catch (error) {
+    console.error('Erro no login:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erro interno do servidor' 
     });
   }
 });
 
-// LOGOUT
-app.post('/logout', (req, res) => {
-  console.log('👋 Fazendo logout...');
-  
-  if (req.session) {
-    req.session.destroy((err) => {
-      if (err) {
-        console.error('❌ Erro ao destruir sessão:', err);
-        return res.json({ success: false, message: 'Erro ao fazer logout' });
-      }
-      
-      res.clearCookie('brainquiz.session');
-      console.log('✅ Logout realizado com sucesso');
-      res.json({ success: true, message: 'Logout realizado com sucesso' });
-    });
-  } else {
-    res.json({ success: true, message: 'Nenhuma sessão ativa' });
-  }
-});
-
-// CADASTRO
-app.post('/cadastro', async (req, res) => {
-  console.log('📝 Novo cadastro pendente:', req.body);
-  
-  const { usuario, senha, nome, sobrenome, email, telefone, celular } = req.body;
-
-  if (!usuario || !senha || !nome || !email) {
-    return res.json({ success: false, message: 'Campos obrigatórios: usuário, senha, nome e email' });
-  }
-
+// ROTA PARA VERIFICAR USUÁRIO LOGADO
+app.get('/usuario', autenticarToken, (req, res) => {
   try {
-    const usuarios = lerJSON(USUARIOS_FILE);
-    if (usuarios.find(u => u.usuario === usuario)) {
-      return res.json({ success: false, message: 'Este usuário já existe' });
+    const usuarios = lerArquivoJSON('usuarios.json', []);
+    const usuario = usuarios.find(u => u.id === req.user.id);
+
+    if (!usuario || !usuario.ativo) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Usuário não encontrado ou inativo' 
+      });
     }
 
-    if (usuarios.find(u => u.email === email)) {
-      return res.json({ success: false, message: 'Este email já está em uso' });
+    const { senha: _, ...dadosUsuario } = usuario;
+    
+    res.json({
+      success: true,
+      usuario: dadosUsuario
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erro ao verificar usuário' 
+    });
+  }
+});
+
+// ROTA PARA CARREGAR PDFS
+app.get('/api/pdfs', autenticarToken, (req, res) => {
+  try {
+    const pdfs = lerArquivoJSON('pdfs.json', []);
+    res.json({ success: true, pdfs });
+  } catch (error) {
+    console.error('Erro ao carregar PDFs:', error);
+    res.status(500).json({ success: false, message: 'Erro ao carregar PDFs' });
+  }
+});
+
+// ROTA PARA UPLOAD DE PDF
+app.post('/upload-pdf', autenticarToken, upload.single('pdf'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Arquivo não encontrado' });
     }
 
-    const cadastrosPendentes = lerJSON(CADASTROS_FILE);
-    if (cadastrosPendentes.find(c => c.usuario === usuario)) {
-      return res.json({ success: false, message: 'Este usuário já possui um cadastro pendente' });
-    }
-
-    if (cadastrosPendentes.find(c => c.email === email)) {
-      return res.json({ success: false, message: 'Este email já possui um cadastro pendente' });
-    }
-
-    const novoCadastro = {
+    const pdfData = {
       id: gerarId(),
-      usuario: usuario.trim(),
-      senha: await bcrypt.hash(senha, 10),
-      nome: nome.trim(),
-      sobrenome: (sobrenome || '').trim(),
-      email: email.trim(),
-      telefone: telefone || celular || '',
-      tipo: 'aluno',
-      status: 'pendente',
-      ativo: false,
-      dataCriacao: new Date().toISOString(),
-      fotoBase64: null
+      nome: req.file.originalname,
+      dados: `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
+      base64: `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
+      bloqueado: false,
+      uploadedBy: req.user.usuario,
+      uploadedAt: new Date().toISOString(),
+      dataUpload: new Date().toISOString()
     };
 
-    cadastrosPendentes.push(novoCadastro);
-    salvarJSON(CADASTROS_FILE, cadastrosPendentes);
+    const pdfs = lerArquivoJSON('pdfs.json', []);
+    pdfs.push(pdfData);
+    salvarArquivoJSON('pdfs.json', pdfs);
 
-    console.log('✅ Cadastro pendente criado:', usuario);
-    
-    res.json({ 
-      success: true, 
-      message: 'Cadastro enviado para aprovação!',
-      needsApproval: true
-    });
-    
+    res.json({ success: true, pdf: pdfData });
   } catch (error) {
-    console.error('❌ Erro no cadastro:', error);
-    res.json({ success: false, message: 'Erro interno do servidor' });
+    console.error('Erro no upload:', error);
+    res.status(500).json({ success: false, message: 'Erro no upload' });
   }
 });
 
-// API USUÁRIOS
-app.get('/api/usuarios', checkAuth, (req, res) => {
+// ROTAS PARA QUIZZES
+app.get('/api/quizzes', autenticarToken, (req, res) => {
   try {
-    const usuarios = lerJSON(USUARIOS_FILE).filter(u => u.status === 'aprovado');
-    res.json({ success: true, usuarios });
+    const quizzes = lerArquivoJSON('quizzes.json', []);
+    res.json({ success: true, quizzes });
   } catch (error) {
-    console.error('❌ Erro ao listar usuários:', error);
-    res.json({ success: false, message: 'Erro ao carregar usuários' });
+    res.status(500).json({ success: false, message: 'Erro ao carregar quizzes' });
   }
 });
 
-// API CADASTROS
-app.get('/api/cadastros', checkAuth, (req, res) => {
+app.get('/api/quizzes/arquivados', autenticarToken, (req, res) => {
   try {
-    if (!['administrador', 'moderador'].includes(req.session.usuario.tipo)) {
-      return res.status(403).json({ success: false, message: 'Acesso negado' });
-    }
-    
-    const cadastros = lerJSON(CADASTROS_FILE);
-    console.log('📋 Cadastros pendentes:', cadastros.length);
-    res.json({ success: true, cadastros });
+    const arquivados = lerArquivoJSON('quizzes_arquivados.json', []);
+    res.json({ success: true, quizzes: arquivados });
   } catch (error) {
-    console.error('❌ Erro ao listar cadastros:', error);
-    res.json({ success: false, message: 'Erro ao carregar cadastros' });
+    res.status(500).json({ success: false, message: 'Erro ao carregar quizzes arquivados' });
   }
 });
 
-// APROVAR CADASTRO
-app.post('/api/cadastros/:id/aprovar', checkAuth, (req, res) => {
-  const cadastroId = req.params.id;
-  console.log('✅ Aprovando cadastro ID:', cadastroId);
-  
+app.get('/api/quizzes/excluidos', autenticarToken, (req, res) => {
   try {
-    if (!['administrador', 'moderador'].includes(req.session.usuario.tipo)) {
-      return res.status(403).json({ success: false, message: 'Acesso negado' });
-    }
-    
-    let cadastros = lerJSON(CADASTROS_FILE);
-    const cadastroIdx = cadastros.findIndex(c => c.id == cadastroId);
-    
-    if (cadastroIdx === -1) {
-      return res.json({ success: false, message: 'Cadastro não encontrado' });
-    }
+    const excluidos = lerArquivoJSON('quizzes_excluidos.json', []);
+    res.json({ success: true, quizzes: excluidos });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao carregar quizzes excluídos' });
+  }
+});
 
-    const cadastro = cadastros[cadastroIdx];
-    
-    let usuarios = lerJSON(USUARIOS_FILE);
-    
-    const novoUsuario = {
-      id: cadastro.id,
-      usuario: cadastro.usuario,
-      senha: cadastro.senha,
-      nome: cadastro.nome,
-      sobrenome: cadastro.sobrenome,
-      email: cadastro.email,
-      telefone: cadastro.telefone,
-      tipo: 'aluno',
-      status: 'aprovado',
-      ativo: true,
-      dataCriacao: cadastro.dataCriacao,
-      dataAprovacao: new Date().toISOString(),
-      aprovadoPor: req.session.usuario.usuario,
-      fotoBase64: cadastro.fotoBase64
+// SISTEMA DE QUIZ TEMPORÁRIO
+let quizTemporario = null;
+
+app.post('/api/quiz-temp', autenticarToken, (req, res) => {
+  try {
+    const quizData = req.body;
+    quizTemporario = {
+      ...quizData,
+      id: gerarId(),
+      createdAt: Date.now(),
+      createdBy: req.user.usuario
     };
     
-    usuarios.push(novoUsuario);
-    cadastros.splice(cadastroIdx, 1);
-    
-    salvarJSON(USUARIOS_FILE, usuarios);
-    salvarJSON(CADASTROS_FILE, cadastros);
-    
-    console.log('✅ Cadastro aprovado:', cadastro.usuario);
-    res.json({ success: true, message: 'Cadastro aprovado com sucesso' });
-    
+    res.json({ success: true, quizId: quizTemporario.id });
   } catch (error) {
-    console.error('❌ Erro ao aprovar cadastro:', error);
-    res.json({ success: false, message: 'Erro interno do servidor' });
+    res.status(500).json({ success: false, message: 'Erro ao salvar quiz temporário' });
   }
 });
 
-// REJEITAR CADASTRO
-app.delete('/api/cadastros/:id', checkAuth, (req, res) => {
-  const cadastroId = req.params.id;
-  console.log('❌ Rejeitando cadastro ID:', cadastroId);
-  
+app.get('/api/quiz-temp', autenticarToken, (req, res) => {
   try {
-    if (!['administrador', 'moderador'].includes(req.session.usuario.tipo)) {
-      return res.status(403).json({ success: false, message: 'Acesso negado' });
-    }
-    
-    let cadastros = lerJSON(CADASTROS_FILE);
-    const idx = cadastros.findIndex(c => c.id == cadastroId);
-    
-    if (idx === -1) {
-      return res.json({ success: false, message: 'Cadastro não encontrado' });
-    }
-
-    cadastros.splice(idx, 1);
-    salvarJSON(CADASTROS_FILE, cadastros);
-    
-    console.log('✅ Cadastro rejeitado');
-    res.json({ success: true, message: 'Cadastro rejeitado com sucesso' });
-    
-  } catch (error) {
-    console.error('❌ Erro ao rejeitar cadastro:', error);
-    res.json({ success: false, message: 'Erro interno do servidor' });
-  }
-});
-
-// API QUIZZES
-app.get('/api/quizzes', checkAuth, (req, res) => {
-  try {
-    const quizzes = lerJSON(QUIZZES_FILE);
-    
-    // Garantir compatibilidade dos campos para todos os quizzes
-    const quizzesCompativeis = quizzes.map(quiz => ({
-      ...quiz,
-      nome: quiz.nome || quiz.titulo,
-      titulo: quiz.titulo || quiz.nome,
-      perguntas: quiz.perguntas ? quiz.perguntas.map(p => ({
-        ...p,
-        alternativas: p.alternativas || p.opcoes,
-        opcoes: p.opcoes || p.alternativas,
-        resposta_certa: p.resposta_certa !== undefined ? p.resposta_certa : p.respostaCorreta,
-        respostaCorreta: p.respostaCorreta !== undefined ? p.respostaCorreta : p.resposta_certa
-      })) : []
-    }));
-    
-    res.json({ success: true, quizzes: quizzesCompativeis });
-  } catch (error) {
-    console.error('❌ Erro ao listar quizzes:', error);
-    res.json({ success: false, message: 'Erro ao carregar quizzes' });
-  }
-});
-
-// BUSCAR QUIZ POR ID
-app.get('/api/quizzes/:id', checkAuth, (req, res) => {
-  try {
-    const quizId = req.params.id;
-    const quizzes = lerJSON(QUIZZES_FILE);
-    const quiz = quizzes.find(q => q.id == quizId);
-    
-    if (!quiz) {
-      return res.json({ success: false, message: 'Quiz não encontrado' });
-    }
-    
-    // Garantir compatibilidade dos campos
-    const quizCompativel = {
-      ...quiz,
-      nome: quiz.nome || quiz.titulo,
-      titulo: quiz.titulo || quiz.nome,
-      perguntas: quiz.perguntas ? quiz.perguntas.map(p => ({
-        ...p,
-        alternativas: p.alternativas || p.opcoes,
-        opcoes: p.opcoes || p.alternativas,
-        resposta_certa: p.resposta_certa !== undefined ? p.resposta_certa : p.respostaCorreta,
-        respostaCorreta: p.respostaCorreta !== undefined ? p.respostaCorreta : p.resposta_certa
-      })) : []
-    };
-    
-    res.json({ success: true, quiz: quizCompativel });
-  } catch (error) {
-    console.error('❌ Erro ao buscar quiz:', error);
-    res.json({ success: false, message: 'Erro interno do servidor' });
-  }
-});
-
-// SALVAR QUIZ
-app.post('/api/quizzes', checkAuth, checkAdminOrModerator, (req, res) => {
-  try {
-    const quiz = req.body;
-
-    if (!quiz || (!quiz.nome && !quiz.titulo) || !quiz.perguntas || !Array.isArray(quiz.perguntas)) {
-      return res.json({ success: false, message: 'Dados do quiz incompletos' });
-    }
-
-    const quizzes = lerJSON(QUIZZES_FILE);
-
-    // Garantir compatibilidade de campos
-    const quizFinal = {
-      ...quiz,
-      nome: quiz.nome || quiz.titulo,
-      titulo: quiz.titulo || quiz.nome,
-      perguntas: quiz.perguntas.map(p => ({
-        ...p,
-        alternativas: p.alternativas || p.opcoes,
-        opcoes: p.opcoes || p.alternativas,
-        resposta_certa: p.resposta_certa !== undefined ? p.resposta_certa : (p.respostaCorreta || 0),
-        respostaCorreta: p.respostaCorreta !== undefined ? p.respostaCorreta : (p.resposta_certa || 0)
-      }))
-    };
-
-    if (quizFinal.id) {
-      const idx = quizzes.findIndex(q => q.id === quizFinal.id);
-      if (idx !== -1) {
-        quizzes[idx] = {
-          ...quizFinal,
-          dataModificacao: new Date().toISOString(),
-          modificadoPor: req.session.usuario.usuario
-        };
-        salvarJSON(QUIZZES_FILE, quizzes);
-        return res.json({ success: true, message: 'Quiz atualizado com sucesso', quiz: quizzes[idx] });
-      }
-    }
-
-    if (quizzes.some(q => (q.nome === quizFinal.nome || q.titulo === quizFinal.titulo))) {
-      return res.json({ success: false, message: 'Já existe um quiz com este nome' });
-    }
-
-    quizFinal.id = gerarId();
-    quizFinal.criadoPor = req.session.usuario.usuario;
-    quizFinal.dataCriacao = new Date().toISOString();
-
-    quizzes.push(quizFinal);
-    salvarJSON(QUIZZES_FILE, quizzes);
-
-    res.json({ success: true, message: 'Quiz salvo com sucesso', quiz: quizFinal });
-    
-  } catch (error) {
-    console.error('❌ Erro ao salvar quiz:', error);
-    res.json({ success: false, message: 'Erro interno do servidor' });
-  }
-});
-
-// EDITAR USUÁRIO
-app.put('/api/usuarios/:usuario', checkAuth, checkAdminOrModerator, async (req, res) => {
-  const usuarioTarget = req.params.usuario;
-  const { nome, sobrenome, email, telefone, tipo } = req.body;
-  
-  let usuarios = lerJSON(USUARIOS_FILE);
-  const idx = usuarios.findIndex(u => u.usuario === usuarioTarget);
-  
-  if (idx === -1) {
-    return res.json({ success: false, message: 'Usuário não encontrado' });
-  }
-
-  if (tipo && usuarios[idx].tipo !== tipo) {
-    if (req.session.usuario.tipo !== 'administrador') {
-      return res.json({ success: false, message: 'Apenas administradores podem alterar o tipo de usuário' });
-    }
-  }
-
-  if (nome) usuarios[idx].nome = nome;
-  if (sobrenome !== undefined) usuarios[idx].sobrenome = sobrenome;
-  if (email) usuarios[idx].email = email;
-  if (telefone !== undefined) usuarios[idx].telefone = telefone;
-  if (tipo && req.session.usuario.tipo === 'administrador') usuarios[idx].tipo = tipo;
-
-  salvarJSON(USUARIOS_FILE, usuarios);
-  res.json({ success: true, message: 'Usuário atualizado com sucesso' });
-});
-
-// ALTERAR ROLE
-app.post('/alterar-role', checkAuth, checkAdmin, async (req, res) => {
-  const { usuario, role } = req.body;
-  
-  if (!usuario || !role) {
-    return res.json({ success: false, message: 'Usuário e role são obrigatórios' });
-  }
-  
-  if (!['aluno', 'moderador', 'administrador'].includes(role)) {
-    return res.json({ success: false, message: 'Role inválido' });
-  }
-  
-  let usuarios = lerJSON(USUARIOS_FILE);
-  const idx = usuarios.findIndex(u => u.usuario === usuario);
-  
-  if (idx === -1) {
-    return res.json({ success: false, message: 'Usuário não encontrado' });
-  }
-  
-  if (usuario === req.session.usuario.usuario) {
-    return res.json({ success: false, message: 'Você não pode alterar seu próprio tipo' });
-  }
-  
-  usuarios[idx].tipo = role;
-  usuarios[idx].dataAlteracao = new Date().toISOString();
-  
-  salvarJSON(USUARIOS_FILE, usuarios);
-  res.json({ success: true, message: `Usuário ${usuario} alterado para ${role}` });
-});
-
-// EXCLUIR USUÁRIO
-app.post('/excluir-usuario', checkAuth, checkAdmin, (req, res) => {
-  const { usuario } = req.body;
-  
-  if (!usuario) {
-    return res.json({ success: false, message: 'Usuário é obrigatório' });
-  }
-  
-  if (usuario === req.session.usuario.usuario) {
-    return res.json({ success: false, message: 'Você não pode excluir seu próprio usuário' });
-  }
-  
-  let usuarios = lerJSON(USUARIOS_FILE);
-  const idx = usuarios.findIndex(u => u.usuario === usuario);
-  
-  if (idx === -1) {
-    return res.json({ success: false, message: 'Usuário não encontrado' });
-  }
-  
-  usuarios.splice(idx, 1);
-  salvarJSON(USUARIOS_FILE, usuarios);
-  
-  res.json({ success: true, message: 'Usuário excluído com sucesso' });
-});
-
-// ATUALIZAR PERFIL
-app.put('/api/perfil', checkAuth, async (req, res) => {
-  const { nome, sobrenome, email, telefone, fotoBase64, senhaAtual, novaSenha } = req.body;
-  
-  if (!senhaAtual) {
-    return res.json({ success: false, message: 'Senha atual é obrigatória para salvar alterações' });
-  }
-
-  let usuarios = lerJSON(USUARIOS_FILE);
-  const idx = usuarios.findIndex(u => u.usuario === req.session.usuario.usuario);
-  
-  if (idx === -1) {
-    return res.json({ success: false, message: 'Usuário não encontrado' });
-  }
-
-  const user = usuarios[idx];
-  let senhaValida = false;
-  
-  try {
-    if (user.senha && user.senha.startsWith('$2b$')) {
-      senhaValida = await bcrypt.compare(senhaAtual, user.senha);
+    if (quizTemporario && Date.now() - quizTemporario.createdAt < 3600000) { // 1 hora
+      res.json({ success: true, quiz: quizTemporario });
     } else {
-      senhaValida = (senhaAtual === user.senha);
+      res.status(404).json({ success: false, message: 'Quiz temporário não encontrado' });
     }
   } catch (error) {
-    return res.json({ success: false, message: 'Erro ao verificar senha' });
+    res.status(500).json({ success: false, message: 'Erro ao carregar quiz temporário' });
   }
-
-  if (!senhaValida) {
-    return res.json({ success: false, message: 'Senha atual incorreta' });
-  }
-
-  // Atualizar dados do perfil
-  if (nome) usuarios[idx].nome = nome;
-  if (sobrenome !== undefined) usuarios[idx].sobrenome = sobrenome;
-  if (email) usuarios[idx].email = email;
-  if (telefone !== undefined) usuarios[idx].telefone = telefone;
-  if (fotoBase64 !== undefined) usuarios[idx].fotoBase64 = fotoBase64;
-
-  // Alterar senha se fornecida
-  if (novaSenha && novaSenha.trim() !== '') {
-    usuarios[idx].senha = await bcrypt.hash(novaSenha, 10);
-    console.log('🔑 Senha alterada para o usuário:', req.session.usuario.usuario);
-  }
-
-  salvarJSON(USUARIOS_FILE, usuarios);
-
-  // Atualizar sessão
-  req.session.usuario = {
-    ...req.session.usuario,
-    nome: usuarios[idx].nome,
-    sobrenome: usuarios[idx].sobrenome,
-    email: usuarios[idx].email,
-    telefone: usuarios[idx].telefone,
-    fotoBase64: usuarios[idx].fotoBase64
-  };
-
-  res.json({ success: true, message: 'Perfil atualizado com sucesso' });
 });
 
-// FUNÇÕES AUXILIARES
-function lerJSON(caminho) {
+// ROTA PARA SALVAR QUIZZES
+app.post('/api/quizzes', autenticarToken, (req, res) => {
   try {
-    if (!fs.existsSync(caminho)) {
-      salvarJSON(caminho, []);
-      return [];
+    const quizData = {
+      ...req.body,
+      id: gerarId(),
+      criadoPor: req.user.usuario,
+      criadoEm: new Date().toISOString()
+    };
+
+    const quizzes = lerArquivoJSON('quizzes.json', []);
+    quizzes.push(quizData);
+    salvarArquivoJSON('quizzes.json', quizzes);
+
+    res.json({ success: true, quiz: quizData });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao salvar quiz' });
+  }
+});
+
+// ROTA DE LOG DE ERROS
+app.post('/api/error-log', (req, res) => {
+  try {
+    const errorLog = {
+      ...req.body,
+      timestamp: new Date().toISOString(),
+      ip: req.ip
+    };
+    
+    console.error('🚨 Error logged:', errorLog);
+    
+    // Em produção, salvar em arquivo ou enviar para serviço de monitoramento
+    const logs = lerArquivoJSON('error_logs.json', []);
+    logs.push(errorLog);
+    
+    // Manter apenas os últimos 1000 logs
+    if (logs.length > 1000) {
+      logs.splice(0, logs.length - 1000);
     }
-    const dados = fs.readFileSync(caminho, 'utf8');
-    return JSON.parse(dados);
+    
+    salvarArquivoJSON('error_logs.json', logs);
+    
+    res.json({ success: true });
   } catch (error) {
-    console.error(`❌ Erro ao ler ${caminho}:`, error);
-    return [];
+    console.error('Erro ao salvar log:', error);
+    res.status(500).json({ success: false });
   }
-}
+});
 
-function salvarJSON(caminho, dados) {
-  try {
-    fs.writeFileSync(caminho, JSON.stringify(dados, null, 2), 'utf8');
-  } catch (error) {
-    console.error(`❌ Erro ao salvar ${caminho}:`, error);
-  }
-}
-
-function gerarId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
-
-// 404
-app.use((req, res) => {
-  res.status(404).json({
+// Middleware de tratamento de erros global
+app.use((error, req, res, next) => {
+  console.error('🚨 Erro não tratado:', error);
+  res.status(500).json({
     success: false,
-    message: 'Endpoint não encontrado',
-    path: req.path
+    message: 'Erro interno do servidor'
   });
 });
 
-// INICIALIZAÇÃO
-app.listen(PORT, async () => {
-  console.log('🚀 Servidor BrainQuiz FINAL rodando na porta:', PORT);
-  console.log('🔗 URL:', `http://localhost:${PORT}`);
+// Rota 404
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Endpoint não encontrado'
+  });
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+  console.log(`🔒 JWT Secret configurado: ${JWT_SECRET.substring(0, 10)}...`);
   
-  try {
-    let usuarios = lerJSON(USUARIOS_FILE);
-    
-    // Verificando e corrigindo admin
-    console.log('🔄 Verificando e corrigindo admin...');
-    
-    // Remove admin existente (se houver)
-    usuarios = usuarios.filter(u => u.usuario !== 'admin');
-    
-    // Cria admin com senha correta
-    console.log('📝 Criando usuário admin com senha correta...');
-    const novoAdmin = {
-      id: Date.now(),
-      usuario: 'admin',
-      nome: 'Administrador',
-      sobrenome: 'Sistema',
-      email: 'admin@brainquiz.com',
-      telefone: '11999999999',
-      senha: await bcrypt.hash('1574569810', 10),
-      tipo: 'administrador',
-      status: 'aprovado',
-      ativo: true,
-      dataCriacao: new Date().toISOString(),
-      fotoBase64: null
-    };
-    
-    usuarios.push(novoAdmin);
-    salvarJSON(USUARIOS_FILE, usuarios);
-    console.log('✅ Admin recriado: admin / 1574569810');
-    
-    const usuariosAtivos = usuarios.filter(u => u.status === 'aprovado' && u.ativo);
-    const cadastrosPendentes = lerJSON(CADASTROS_FILE);
-    const quizzes = lerJSON(QUIZZES_FILE);
-    
-    console.log('');
-    console.log('📊 ESTATÍSTICAS DO SISTEMA:');
-    console.log('┌─────────────────────────┬─────────┐');
-    console.log('│ Usuários ativos         │', usuariosAtivos.length.toString().padStart(7), '│');
-    console.log('│ Cadastros pendentes     │', cadastrosPendentes.length.toString().padStart(7), '│');
-    console.log('│ Quizzes disponíveis     │', quizzes.length.toString().padStart(7), '│');
-    console.log('└─────────────────────────┴─────────┘');
-    console.log('');
-    console.log('🔑 LOGIN CORRETO: admin / 1574569810');
-    console.log('✅ Sistema FINAL funcionando perfeitamente!');
-    console.log('🌐 CORS configurado para:');
-    console.log('   - https://brainquiiz.netlify.app');
-    console.log('   - https://brainquiz-backend.onrender.com');
-    
-  } catch (error) {
-    console.error('❌ Erro na inicialização:', error);
-  }
+  // Verificar arquivos essenciais na inicialização
+  const arquivos = ['usuarios.json', 'pdfs.json', 'quizzes.json'];
+  arquivos.forEach(arquivo => {
+    if (!fs.existsSync(path.join(__dirname, arquivo))) {
+      console.warn(`⚠️  Arquivo ${arquivo} não encontrado, será criado quando necessário`);
+    }
+  });
 });
