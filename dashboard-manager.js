@@ -1,6 +1,6 @@
 class DashboardManager {
   constructor() {
-    this.baseURL = 'https://brainquiz-backend.onrender.com';
+    this.baseURL = 'https://brainquiz-wel0.onrender.com';
     this.dados = {
       quizzes: [],
       pdfs: [],
@@ -17,7 +17,7 @@ class DashboardManager {
       const usuario = await authManager.getUsuarioAtual();
       if (!usuario) {
         console.error('❌ Usuário não autenticado');
-        window.location.href = 'https://brainquiiz.netlify.app/index.html';
+        window.location.href = 'https://brainquiz-wel0.onrender.com/index.html';
         return;
       }
 
@@ -141,7 +141,7 @@ class DashboardManager {
           <div class="empty-icon">📝</div>
           <h3>Nenhum quiz criado ainda</h3>
           <p>Comece criando seu primeiro quiz!</p>
-          <button class="btn btn-primary" onclick="window.location.href='https://brainquiiz.netlify.app/painel.html'">
+          <button class="btn btn-primary" onclick="window.location.href='https://brainquiz-wel0.onrender.com/painel.html'">
             Criar Primeiro Quiz
           </button>
         </div>
@@ -152,7 +152,7 @@ class DashboardManager {
     container.innerHTML = `
       <div class="section-header">
         <h3>📝 Quizzes Ativos (${this.dados.quizzes.length})</h3>
-        <button class="btn btn-success" onclick="window.location.href='https://brainquiiz.netlify.app/painel.html'">
+        <button class="btn btn-success" onclick="window.location.href='https://brainquiz-wel0.onrender.com/painel.html'">
           + Novo Quiz
         </button>
       </div>
@@ -554,7 +554,7 @@ class DashboardManager {
       }
 
       // Redirecionar para o player com ID do quiz
-      window.location.href = `https://brainquiiz.netlify.app/quiz.html?id=${quizId}`;
+      window.location.href = `https://brainquiz-wel0.onrender.com/quiz.html?id=${quizId}`;
       
     } catch (error) {
       console.error('Erro ao jogar quiz:', error);
@@ -566,7 +566,7 @@ class DashboardManager {
     const quiz = this.dados.quizzes.find(q => q.id === quizId);
     if (quiz) {
       // Passar ID do quiz na URL para edição
-      window.location.href = `https://brainquiiz.netlify.app/painel.html?edit=${quizId}`;
+      window.location.href = `https://brainquiz-wel0.onrender.com/painel.html?edit=${quizId}`;
     }
   }
 
@@ -1142,4 +1142,4 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-console.log('✅ DashboardManager COMPLETO - APENAS DADOS REAIS!');
+console.log('✅ DashboardManager conectado ao Render: https://brainquiz-wel0.onrender.com');
