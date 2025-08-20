@@ -614,7 +614,7 @@ async function realizarCadastro(formData) {
       fotoBase64: selectedPhoto ? 'IMAGEM_ANEXADA' : null
     });
     
-    const response = await fetch('https://brainquiz-backend.onrender.com/cadastro', {
+    const response = await fetch('https://brainquiz-wel0.onrender.com/cadastro', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -668,7 +668,7 @@ async function realizarCadastro(formData) {
 
 function voltarLogin() {
   console.log('🔄 Redirecionando para login...');
-  window.location.href = 'https://brainquiiz.netlify.app/index.html';
+  window.location.href = 'https://brainquiz-wel0.onrender.com/index.html';
 }
 
 // ============================================================================
@@ -739,12 +739,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nome').focus();
   }, 100);
   
-  console.log('🔧 Sistema conectado ao backend em https://brainquiz-backend.onrender.com/cadastro');
+  console.log('🔧 Sistema conectado ao backend em https://brainquiz-wel0.onrender.com/cadastro');
 });
 
 console.log('🔧 Sistema de Cadastro CORRIGIDO - Backend Integrado');
-console.log('📡 Endpoint: https://brainquiz-backend.onrender.com/cadastro');
-console.log('🔄 Redirecionamento: https://brainquiiz.netlify.app/index.html');
+console.log('📡 Endpoint: https://brainquiz-wel0.onrender.com/cadastro');
+console.log('🔄 Redirecionamento: https://brainquiz-wel0.onrender.com/index.html');
 console.log('⏳ Cadastros serão aprovados automaticamente em até 2 horas');
 
 </script>
