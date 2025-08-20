@@ -1,6 +1,6 @@
 class AuthManager {
   constructor() {
-    this.baseURL = 'https://brainquiz-backend.onrender.com';
+    this.baseURL = 'https://brainquiz-wel0.onrender.com';
     this.maxRetries = 3;
     this.retryDelay = 1000;
     this.offlineTimeout = 300000; // 5 minutos offline
@@ -358,4 +358,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-console.log('✅ AuthManager corrigido com credenciais locais e URLs atualizadas!');
+console.log('✅ AuthManager conectado ao Render: https://brainquiz-wel0.onrender.com');
