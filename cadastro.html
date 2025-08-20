@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cadastro - BrainQuiz</title>
+  <script src="auth.js"></script>
+  <link rel="stylesheet" href="system-styles.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #000 0%, #1a1a2e 50%, #16213e 100%);
+      color: #0af;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Particles Animation */
+    .particles {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: -1;
+    }
+    
+    .particle {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: #0af;
+      border-radius: 50%;
+      animation: float 8s infinite linear;
+      box-shadow: 0 0 10px #0af;
+    }
+    
+    @keyframes float {
+      0% {
+        transform: translateY(100vh) translateX(0px);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      90% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(-100px) translateX(100px);
+        opacity: 0;
+      }
+    }
+
+    .cadastro-container {
+      background: rgba(17, 17, 17, 0.9);
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,170,255,0.3);
+      padding: 40px;
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(0,170,255,0.3);
+    }
+
+    .logo {
+      font-size: 3.5rem;
+      margin-bottom: 20px;
+      animation: pulse 3s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { 
+        text-shadow: 0 0 20px #0af;
+        transform: scale(1);
+      }
+      50% { 
+        text-shadow: 0 0 40px #0af, 0 0 60px #0af;
+        transform: scale(1.05);
+      }
+    }
+
+    h1 {
+      margin: 0 0 30px 0;
+      font-size: 2.5rem;
+      text-shadow: 0 0 20px #0af;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #0af;
+      font-weight: bold;
+    }
+
+    input[type="text"], 
+    input[type="email"], 
+    input[type="tel"], 
+    input[type="password"],
+    select {
+      width: 100%;
+      padding: 15px;
+      background: rgba(34, 34, 34, 0.8);
+      border: 2px solid rgba(0,170,255,0.3);
+      border-radius: 10px;
+      color: #0af;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      box-sizing: border-box;
+    }
+
+    input[type="text"]:focus, 
+    input[type="email"]:focus, 
+    input[type="tel"]:focus, 
+    input[type="password"]:focus,
+    select:focus {
+      outline: none;
+      border-color: #0af;
+      box-shadow: 0 0 15px rgba(0,170,255,0.3);
+      background: rgba(51, 51, 51, 0.9);
+    }
+
+    .photo-upload {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .photo-preview {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      margin: 0 auto 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(45deg, #0af, #08c);
+      color: #000;
+      font-weight: bold;
+      font-size: 3rem;
+      overflow: hidden;
+      border: 4px solid rgba(0,170,255,0.5);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .photo-preview:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 25px rgba(0,170,255,0.4);
+    }
+
+    .photo-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-label {
+      color: #666;
+      font-size: 0.9rem;
+      margin-top: 10px;
+    }
+
+    .cadastro-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(45deg, #0af, #08c);
+      border: none;
+      border-radius: 10px;
+      color: #000;
+      font-weight: bold;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 25px rgba(0,170,255,0.3);
+      margin-bottom: 20px;
+    }
+
+    .cadastro-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 35px rgba(0,170,255,0.5);
+      background: linear-gradient(45deg, #08c, #0af);
+    }
+
+    .cadastro-btn:disabled {
+      background: #666;
+      color: #999;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .links {
+      text-align: center;
+    }
+
+    .links a {
+      color: #0af;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      background: rgba(0,170,255,0.1);
+      border: 1px solid rgba(0,170,255,0.3);
+      display: inline-block;
+      cursor: pointer;
+    }
+
+    .links a:hover {
+      background: rgba(0,170,255,0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,170,255,0.3);
+    }
+
+    .error-message, .success-message {
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: none;
+      backdrop-filter: blur(5px);
+    }
+
+    .error-message {
+      background: rgba(255, 68, 68, 0.1);
+      border: 2px solid rgba(255, 68, 68, 0.3);
+      color: #ff4444;
+    }
+
+    .success-message {
+      background: rgba(40, 167, 69, 0.1);
+      border: 2px solid rgba(40, 167, 69, 0.3);
+      color: #28a745;
+    }
+
+    .loading {
+      display: none;
+      color: #0af;
+      font-style: italic;
+      text-align: center;
+      padding: 20px;
+      animation: pulse-loading 2s infinite;
+    }
+
+    @keyframes pulse-loading {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+
+    .info-box {
+      background: rgba(255, 193, 7, 0.1);
+      border: 2px solid rgba(255, 193, 7, 0.4);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 25px;
+      text-align: left;
+    }
+
+    .info-box h3 {
+      color: #ffc107;
+      margin-top: 0;
+      margin-bottom: 15px;
+      font-size: 1.2rem;
+    }
+
+    .info-box p {
+      margin: 8px 0;
+      color: #ffc107;
+      line-height: 1.4;
+    }
+
+    .password-requirements {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .password-requirements.valid {
+      color: #28a745;
+    }
+
+    .password-requirements.invalid {
+      color: #ff4444;
+    }
+
+    @media (max-width: 500px) {
+      .cadastro-container {
+        margin: 20px;
+        padding: 30px 20px;
+      }
+      
+      h1 {
+        font-size: 2rem;
+      }
+      
+      .logo {
+        font-size: 2.5rem;
+      }
+
+      .photo-preview {
+        width: 100px;
+        height: 100px;
+        font-size: 2.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="particles"></div>
+  
+  <div class="cadastro-container">
+    <div class="logo">🧠</div>
+    <h1>Cadastro</h1>
+    
+    <div class="info-box">
+      <h3>⏳ Sistema de Aprovação:</h3>
+      <p><strong>1.</strong> Seu cadastro será enviado para aprovação</p>
+      <p><strong>2.</strong> Um administrador analisará seus dados</p>
+      <p><strong>3.</strong> Em até 2 horas você será aprovado</p>
+      <p><strong>4.</strong> Após aprovação, poderá fazer login</p>
+    </div>
+    
+    <div id="errorMessage" class="error-message"></div>
+    <div id="successMessage" class="success-message"></div>
+    <div id="loading" class="loading">📤 Enviando cadastro para aprovação...</div>
+    
+    <form id="cadastroForm">
+      <div class="photo-upload">
+        <div class="photo-preview" onclick="selectPhoto()">
+          <span id="photoPlaceholder">📷</span>
+        </div>
+        <div class="photo-label">Clique para adicionar foto (opcional)</div>
+        <input type="file" id="photoInput" accept="image/*" style="display: none;">
+      </div>
+
+      <div class="form-group">
+        <label for="nome">👤 Nome:</label>
+        <input type="text" id="nome" name="nome" required>
+      </div>
+
+      <div class="form-group">
+        <label for="sobrenome">👤 Sobrenome:</label>
+        <input type="text" id="sobrenome" name="sobrenome" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="usuario">🔖 Usuário:</label>
+        <input type="text" id="usuario" name="usuario" required>
+        <div class="password-requirements" id="usuarioStatus">
+          Mínimo 3 caracteres, apenas letras, números e underscore
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="email">📧 Email:</label>
+        <input type="email" id="email" name="email" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="telefone">📱 Telefone:</label>
+        <input type="tel" id="telefone" name="telefone" placeholder="(11) 99999-9999">
+      </div>
+      
+      <div class="form-group">
+        <label for="senha">🔐 Senha:</label>
+        <input type="password" id="senha" name="senha" required>
+        <div class="password-requirements" id="senhaStatus">
+          Mínimo 6 caracteres
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="confirmarSenha">🔐 Confirmar Senha:</label>
+        <input type="password" id="confirmarSenha" name="confirmarSenha" required>
+        <div class="password-requirements" id="confirmStatus">
+          As senhas devem coincidir
+        </div>
+      </div>
+      
+      <button type="submit" class="cadastro-btn" id="submitBtn">
+        📝 Enviar Cadastro para Aprovação
+      </button>
+    </form>
+    
+    <div class="links">
+      <a onclick="voltarLogin()">🔙 Voltar ao Login</a>
+    </div>
+  </div>
+
+<script>
+console.log('🚀 Sistema de Cadastro CORRIGIDO - Backend Integrado');
+
+// ============================================================================
+// CONFIGURAÇÕES E INICIALIZAÇÃO
+// ============================================================================
+
+let selectedPhoto = null;
+
+// Criar partículas animadas
+function criarParticulas() {
+  const container = document.querySelector('.particles');
+  
+  setInterval(() => {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    particle.style.left = Math.random() * 100 + 'vw';
+    particle.style.animationDelay = Math.random() * 2 + 's';
+    container.appendChild(particle);
+    
+    setTimeout(() => {
+      if (particle.parentNode) {
+        particle.parentNode.removeChild(particle);
+      }
+    }, 8000);
+  }, 500);
+}
+
+// ============================================================================
+// SISTEMA DE UPLOAD DE FOTO
+// ============================================================================
+
+function selectPhoto() {
+  document.getElementById('photoInput').click();
+}
+
+function handlePhotoSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  // Validações de arquivo
+  if (!file.type.startsWith('image/')) {
+    mostrarErro('❌ Apenas arquivos de imagem são permitidos!');
+    return;
+  }
+  
+  if (file.size > 5 * 1024 * 1024) { // 5MB
+    mostrarErro('❌ A imagem deve ter no máximo 5MB!');
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const preview = document.querySelector('.photo-preview');
+    preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+    selectedPhoto = e.target.result;
+  };
+  
+  reader.readAsDataURL(file);
+}
+
+// ============================================================================
+// SISTEMA DE VALIDAÇÃO EM TEMPO REAL
+// ============================================================================
+
+function setupValidation() {
+  const usuario = document.getElementById('usuario');
+  const senha = document.getElementById('senha');
+  const confirmarSenha = document.getElementById('confirmarSenha');
+  
+  usuario.addEventListener('input', validateUsuario);
+  senha.addEventListener('input', validateSenha);
+  confirmarSenha.addEventListener('input', validateConfirmSenha);
+}
+
+function validateUsuario() {
+  const usuario = document.getElementById('usuario').value;
+  const status = document.getElementById('usuarioStatus');
+  const isValid = /^[a-zA-Z0-9_]{3,}$/.test(usuario);
+  
+  if (usuario.length === 0) {
+    status.textContent = 'Mínimo 3 caracteres, apenas letras, números e underscore';
+    status.className = 'password-requirements';
+  } else if (isValid) {
+    status.textContent = '✅ Usuário válido';
+    status.className = 'password-requirements valid';
+  } else {
+    status.textContent = '❌ Apenas letras, números e underscore. Mínimo 3 caracteres';
+    status.className = 'password-requirements invalid';
+  }
+  
+  updateSubmitButton();
+}
+
+function validateSenha() {
+  const senha = document.getElementById('senha').value;
+  const status = document.getElementById('senhaStatus');
+  const isValid = senha.length >= 6;
+  
+  if (senha.length === 0) {
+    status.textContent = 'Mínimo 6 caracteres';
+    status.className = 'password-requirements';
+  } else if (isValid) {
+    status.textContent = '✅ Senha válida';
+    status.className = 'password-requirements valid';
+  } else {
+    status.textContent = '❌ Muito curta, mínimo 6 caracteres';
+    status.className = 'password-requirements invalid';
+  }
+  
+  // Revalidar confirmação se já foi preenchida
+  if (document.getElementById('confirmarSenha').value) {
+    validateConfirmSenha();
+  }
+  
+  updateSubmitButton();
+}
+
+function validateConfirmSenha() {
+  const senha = document.getElementById('senha').value;
+  const confirmarSenha = document.getElementById('confirmarSenha').value;
+  const status = document.getElementById('confirmStatus');
+  
+  if (confirmarSenha.length === 0) {
+    status.textContent = 'As senhas devem coincidir';
+    status.className = 'password-requirements';
+  } else if (senha === confirmarSenha) {
+    status.textContent = '✅ Senhas coincidem';
+    status.className = 'password-requirements valid';
+  } else {
+    status.textContent = '❌ Senhas não coincidem';
+    status.className = 'password-requirements invalid';
+  }
+  
+  updateSubmitButton();
+}
+
+function updateSubmitButton() {
+  const usuario = document.getElementById('usuario').value;
+  const senha = document.getElementById('senha').value;
+  const confirmarSenha = document.getElementById('confirmarSenha').value;
+  const submitBtn = document.getElementById('submitBtn');
+  
+  const usuarioValido = /^[a-zA-Z0-9_]{3,}$/.test(usuario);
+  const senhaValida = senha.length >= 6;
+  const senhasCoinciden = senha === confirmarSenha && senha.length > 0;
+  
+  if (usuarioValido && senhaValida && senhasCoinciden) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '📝 Enviar Cadastro para Aprovação';
+  } else {
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ Preencha os campos corretamente';
+  }
+}
+
+// ============================================================================
+// SISTEMA DE MENSAGENS
+// ============================================================================
+
+function mostrarErro(mensagem) {
+  const errorDiv = document.getElementById('errorMessage');
+  errorDiv.textContent = mensagem;
+  errorDiv.style.display = 'block';
+  
+  setTimeout(() => {
+    errorDiv.style.display = 'none';
+  }, 5000);
+}
+
+function mostrarSucesso(mensagem) {
+  const successDiv = document.getElementById('successMessage');
+  successDiv.textContent = mensagem;
+  successDiv.style.display = 'block';
+}
+
+function mostrarLoading(show = true) {
+  const loading = document.getElementById('loading');
+  const form = document.getElementById('cadastroForm');
+  
+  if (show) {
+    loading.style.display = 'block';
+    form.style.opacity = '0.5';
+    form.style.pointerEvents = 'none';
+  } else {
+    loading.style.display = 'none';
+    form.style.opacity = '1';
+    form.style.pointerEvents = 'auto';
+  }
+}
+
+// ============================================================================
+// SISTEMA DE CADASTRO - CORRIGIDO PARA BACKEND
+// ============================================================================
+
+async function realizarCadastro(formData) {
+  console.log('🚀 Enviando cadastro para o backend...');
+  
+  try {
+    mostrarLoading(true);
+    
+    const dadosCadastro = {
+      usuario: formData.usuario,
+      senha: formData.senha,
+      nome: formData.nome,
+      sobrenome: formData.sobrenome,
+      email: formData.email,
+      telefone: formData.telefone,
+      fotoBase64: selectedPhoto
+    };
+    
+    console.log('📤 Dados para envio:', {
+      ...dadosCadastro,
+      senha: '***',
+      fotoBase64: selectedPhoto ? 'IMAGEM_ANEXADA' : null
+    });
+    
+    const response = await fetch('https://brainquiz-backend.onrender.com/cadastro', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify(dadosCadastro)
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      console.log('✅ Cadastro enviado para aprovação!');
+      mostrarLoading(false);
+      
+      if (result.needsApproval) {
+        // Sistema de aprovação
+        mostrarSucesso('✅ Cadastro enviado com sucesso! Seu cadastro foi enviado para análise. Em até 2 horas você será aprovado automaticamente. Redirecionando para o login...');
+      } else {
+        // Compatibilidade: caso seja aprovação automática
+        mostrarSucesso('✅ Cadastro realizado com sucesso! Você já pode fazer login. Redirecionando para a página de login...');
+      }
+      
+      // Limpar formulário
+      document.getElementById('cadastroForm').reset();
+      document.querySelector('.photo-preview').innerHTML = '<span id="photoPlaceholder">📷</span>';
+      selectedPhoto = null;
+      
+      setTimeout(() => {
+        voltarLogin();
+      }, 5000); // Mais tempo para ler a mensagem
+      
+      return true;
+    } else {
+      console.log('❌ Erro do servidor:', result.message);
+      mostrarLoading(false);
+      mostrarErro('❌ Erro: ' + (result.message || 'Erro interno do servidor'));
+      return false;
+    }
+    
+  } catch (error) {
+    console.error('🚨 Erro na requisição:', error);
+    mostrarLoading(false);
+    mostrarErro('🚨 Erro de conexão com o servidor. Verifique sua conexão.');
+    return false;
+  }
+}
+
+// ============================================================================
+// NAVEGAÇÃO - CORRIGIDA
+// ============================================================================
+
+function voltarLogin() {
+  console.log('🔄 Redirecionando para login...');
+  window.location.href = 'https://brainquiiz.netlify.app/index.html';
+}
+
+// ============================================================================
+// EVENT LISTENERS E INICIALIZAÇÃO
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('✅ Sistema de cadastro CORRIGIDO - Backend Integrado');
+  
+  // Iniciar animações
+  criarParticulas();
+  
+  // Configurar validações
+  setupValidation();
+  
+  // Configurar upload de foto
+  document.getElementById('photoInput').addEventListener('change', handlePhotoSelect);
+  
+  // Configurar formulário
+  const form = document.getElementById('cadastroForm');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = {
+      nome: document.getElementById('nome').value.trim(),
+      sobrenome: document.getElementById('sobrenome').value.trim(),
+      usuario: document.getElementById('usuario').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      telefone: document.getElementById('telefone').value.trim(),
+      senha: document.getElementById('senha').value.trim(),
+      confirmarSenha: document.getElementById('confirmarSenha').value.trim()
+    };
+    
+    // Validações client-side
+    if (!formData.nome || !formData.sobrenome || !formData.usuario || 
+        !formData.email || !formData.senha || !formData.confirmarSenha) {
+      mostrarErro('⚠️ Por favor, preencha todos os campos obrigatórios!');
+      return;
+    }
+    
+    if (!/^[a-zA-Z0-9_]{3,}$/.test(formData.usuario)) {
+      mostrarErro('❌ Usuário deve ter pelo menos 3 caracteres e conter apenas letras, números e underscore!');
+      return;
+    }
+    
+    if (formData.senha.length < 6) {
+      mostrarErro('❌ A senha deve ter pelo menos 6 caracteres!');
+      return;
+    }
+    
+    if (formData.senha !== formData.confirmarSenha) {
+      mostrarErro('❌ As senhas não coincidem!');
+      return;
+    }
+    
+    // Validar email
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      mostrarErro('❌ Digite um email válido!');
+      return;
+    }
+    
+    // Realizar cadastro no servidor
+    await realizarCadastro(formData);
+  });
+  
+  // Focar no primeiro campo
+  setTimeout(() => {
+    document.getElementById('nome').focus();
+  }, 100);
+  
+  console.log('🔧 Sistema conectado ao backend em https://brainquiz-backend.onrender.com/cadastro');
+});
+
+console.log('🔧 Sistema de Cadastro CORRIGIDO - Backend Integrado');
+console.log('📡 Endpoint: https://brainquiz-backend.onrender.com/cadastro');
+console.log('🔄 Redirecionamento: https://brainquiiz.netlify.app/index.html');
+console.log('⏳ Cadastros serão aprovados automaticamente em até 2 horas');
+
+</script>
+</body>
+</html>

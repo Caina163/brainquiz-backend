@@ -1,0 +1,415 @@
+class AuthManager {
+  constructor() {
+    this.baseURL = 'https://brainquiz-backend.onrender.com';
+    this.maxRetries = 3;
+    this.retryDelay = 1000;
+    this.offlineTimeout = 300000; // 5 minutos offline
+  }
+
+  async verificarAutenticacao() {
+    // Primeira verificação: dados locais
+    const token = localStorage.getItem('authToken');
+    const usuarioLocal = localStorage.getItem('usuarioLogado');
+    const timestamp = localStorage.getItem('authTimestamp');
+    
+    if (token && usuarioLocal && timestamp) {
+      try {
+        // Tentar validar no servidor
+        const isValid = await this.validarTokenComRetry(token);
+        if (isValid) {
+          this.atualizarTimestamp();
+          return JSON.parse(usuarioLocal);
+        }
+      } catch (error) {
+        console.warn('Erro ao validar token online, usando cache offline:', error);
+        
+        // Se falhou conexão mas dados são recentes, usar offline
+        if (Date.now() - parseInt(timestamp) < this.offlineTimeout) {
+          console.log('🔄 Usando autenticação offline (cache válido)');
+          return JSON.parse(usuarioLocal);
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  async validarTokenComRetry(token, tentativa = 1) {
+    try {
+      const response = await fetch(`${this.baseURL}/usuario`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.success && data.usuario;
+      }
+      
+      if (response.status === 401 || response.status === 403) {
+        this.logout();
+        return false;
+      }
+      
+      throw new Error(`HTTP ${response.status}`);
+      
+    } catch (error) {
+      if (tentativa < this.maxRetries) {
+        await this.delay(this.retryDelay * tentativa);
+        return this.validarTokenComRetry(token, tentativa + 1);
+      }
+      throw error;
+    }
+  }
+
+  async login(usuario, senha) {
+    try {
+      this.mostrarCarregamento('Fazendo login...');
+      
+      // Primeiro tentar backend
+      let loginResult = await this.tentarLoginBackend(usuario, senha);
+      
+      // Se backend falhar, tentar credenciais locais
+      if (!loginResult.success) {
+        console.log('Backend falhou, tentando credenciais locais...');
+        loginResult = this.tentarLoginLocal(usuario, senha);
+      }
+      
+      return loginResult;
+      
+    } catch (error) {
+      console.error('Erro no login:', error);
+      
+      // Fallback para credenciais locais
+      console.log('Erro de conexão, tentando credenciais locais...');
+      return this.tentarLoginLocal(usuario, senha);
+      
+    } finally {
+      this.esconderCarregamento();
+    }
+  }
+
+  async tentarLoginBackend(usuario, senha) {
+    try {
+      const response = await fetch(`${this.baseURL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ usuario, senha })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        // Salvar dados de autenticação
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('usuarioLogado', JSON.stringify(data.usuario));
+        this.atualizarTimestamp();
+        
+        console.log('✅ Login realizado com sucesso no backend');
+        return { success: true, usuario: data.usuario };
+      } else {
+        return { success: false, message: data.message || 'Credenciais inválidas' };
+      }
+      
+    } catch (error) {
+      console.error('Erro no login backend:', error);
+      throw error;
+    }
+  }
+
+  tentarLoginLocal(usuario, senha) {
+    // Sem credenciais locais - sempre falha
+    // Força o uso apenas de dados reais do backend
+    return { 
+      success: false, 
+      message: 'Conexão com servidor necessária. Verifique sua internet.' 
+    };
+  }  email: 'admin@brainquiz.com',
+          tipo: 'administrador',
+          ativo: true
+        }
+      },
+      {
+        usuario: 'Castiel',
+        senha: 'castiel123',
+        dados: {
+          id: 'mdlayvain3xqsj',
+          usuario: 'Castiel',
+          nome: 'Davi',
+          sobrenome: '',
+          email: 'davi@brainquiz.com',
+          tipo: 'aluno',
+          ativo: true
+        }
+      },
+      {
+        usuario: 'moderador',
+        senha: 'mod123',
+        dados: {
+          id: 2,
+          usuario: 'moderador',
+          nome: 'Moderador',
+          sobrenome: 'Teste',
+          email: 'mod@brainquiz.com',
+          tipo: 'moderador',
+          ativo: true
+        }
+      }
+    ];
+
+    const credencial = credenciaisLocais.find(c => 
+      c.usuario.toLowerCase() === usuario.toLowerCase() && c.senha === senha
+    );
+
+    if (credencial) {
+      // Gerar token local
+      const tokenLocal = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      
+      // Salvar dados de autenticação
+      localStorage.setItem('authToken', tokenLocal);
+      localStorage.setItem('usuarioLogado', JSON.stringify(credencial.dados));
+      this.atualizarTimestamp();
+      
+      console.log('✅ Login realizado com credenciais locais');
+      return { success: true, usuario: credencial.dados };
+    }
+
+    return { 
+      success: false, 
+      message: 'Usuário ou senha incorretos' 
+    };
+  }
+
+  logout() {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('usuarioLogado');
+    localStorage.removeItem('authTimestamp');
+    
+    console.log('👋 Logout realizado');
+    
+    // Redirecionar para página inicial - URL CORRIGIDA
+    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+      window.location.href = 'https://brainquiiz.netlify.app/index.html';
+    }
+  }
+
+  atualizarTimestamp() {
+    localStorage.setItem('authTimestamp', Date.now().toString());
+  }
+
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  mostrarCarregamento(mensagem) {
+    // Remover loader existente se houver
+    this.esconderCarregamento();
+    
+    // Criar indicador de carregamento
+    const loader = document.createElement('div');
+    loader.id = 'auth-loader';
+    loader.innerHTML = `
+      <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                  background: rgba(0,0,0,0.7); display: flex; align-items: center; 
+                  justify-content: center; z-index: 9999; backdrop-filter: blur(5px);">
+        <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); 
+                    padding: 30px; border-radius: 15px; text-align: center;
+                    border: 2px solid #0af; box-shadow: 0 0 30px rgba(0,170,255,0.5);">
+          <div style="border: 3px solid rgba(0,170,255,0.3); border-top: 3px solid #0af; 
+                      border-radius: 50%; width: 40px; height: 40px; 
+                      animation: spin 1s linear infinite; margin: 0 auto 15px;"></div>
+          <p style="color: #0af; font-family: 'Segoe UI', sans-serif; 
+                    font-weight: bold; margin: 0; font-size: 1.1rem;">${mensagem}</p>
+        </div>
+      </div>
+      <style>
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    `;
+    document.body.appendChild(loader);
+  }
+
+  esconderCarregamento() {
+    const loader = document.getElementById('auth-loader');
+    if (loader) {
+      loader.remove();
+    }
+  }
+
+  // Verificar se usuário está logado (para uso nos outros arquivos)
+  async isLoggedIn() {
+    const usuario = await this.verificarAutenticacao();
+    return usuario !== null;
+  }
+
+  // Obter dados do usuário atual
+  async getUsuarioAtual() {
+    return await this.verificarAutenticacao();
+  }
+
+  // Fazer requisições autenticadas
+  async makeAuthenticatedRequest(url, options = {}) {
+    const token = localStorage.getItem('authToken');
+    
+    if (!token) {
+      throw new Error('Token não encontrado');
+    }
+
+    const defaultOptions = {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      credentials: 'include'
+    };
+
+    const response = await fetch(url, { ...defaultOptions, ...options });
+    
+    if (response.status === 401 || response.status === 403) {
+      this.logout();
+      throw new Error('Sessão expirada');
+    }
+
+    return response;
+  }
+
+  // Método para processar login do formulário
+  async processarLogin(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const usuario = formData.get('usuario') || formData.get('username');
+    const senha = formData.get('senha') || formData.get('password');
+
+    if (!usuario || !senha) {
+      this.mostrarErro('Por favor, preencha todos os campos');
+      return false;
+    }
+
+    const resultado = await this.login(usuario, senha);
+
+    if (resultado.success) {
+      this.mostrarSucesso('Login realizado com sucesso!');
+      
+      // Aguardar um pouco para mostrar mensagem de sucesso
+      setTimeout(() => {
+        // Redirecionar para dashboard - URL CORRIGIDA
+        window.location.href = 'https://brainquiiz.netlify.app/dashboard.html';
+      }, 1000);
+      
+      return true;
+    } else {
+      this.mostrarErro(resultado.message || 'Erro no login');
+      return false;
+    }
+  }
+
+  mostrarErro(mensagem) {
+    this.mostrarNotificacao(mensagem, 'error');
+  }
+
+  mostrarSucesso(mensagem) {
+    this.mostrarNotificacao(mensagem, 'success');
+  }
+
+  mostrarNotificacao(mensagem, tipo = 'info') {
+    // Remover notificação existente
+    const existente = document.getElementById('auth-notification');
+    if (existente) existente.remove();
+
+    const cores = {
+      success: { bg: '#22c55e', text: '#fff' },
+      error: { bg: '#ef4444', text: '#fff' },
+      info: { bg: '#0af', text: '#000' }
+    };
+
+    const cor = cores[tipo] || cores.info;
+
+    const notification = document.createElement('div');
+    notification.id = 'auth-notification';
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 10000;
+      padding: 15px 25px;
+      background: ${cor.bg};
+      color: ${cor.text};
+      border-radius: 8px;
+      font-weight: bold;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      opacity: 0;
+      transform: translateX(100%);
+      transition: all 0.3s ease;
+      font-family: 'Segoe UI', sans-serif;
+    `;
+
+    notification.textContent = mensagem;
+    document.body.appendChild(notification);
+
+    // Animar entrada
+    setTimeout(() => {
+      notification.style.opacity = '1';
+      notification.style.transform = 'translateX(0)';
+    }, 10);
+
+    // Auto-remover após 4 segundos
+    setTimeout(() => {
+      if (notification.parentElement) {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => notification.remove(), 300);
+      }
+    }, 4000);
+  }
+}
+
+// Instância global
+window.authManager = new AuthManager();
+
+// Função global para processar login (para compatibilidade com formulários)
+window.fazerLogin = async function(event) {
+  return await authManager.processarLogin(event);
+};
+
+// Verificação automática ao carregar qualquer página (exceto login)
+document.addEventListener('DOMContentLoaded', async () => {
+  const pathname = window.location.pathname;
+  const isLoginPage = pathname === '/' || pathname === '/index.html' || pathname.includes('index.html');
+  
+  // Só verificar se NÃO está na página de login
+  if (!isLoginPage) {
+    console.log('🔍 Verificando autenticação...');
+    
+    const loggedIn = await authManager.isLoggedIn();
+    
+    if (!loggedIn) {
+      console.log('❌ Usuário não autenticado, redirecionando para login');
+      // URL CORRIGIDA
+      window.location.href = 'https://brainquiiz.netlify.app/index.html';
+    } else {
+      console.log('✅ Usuário autenticado');
+    }
+  } else {
+    // Se está na página de login e já está logado, redirecionar para dashboard
+    const loggedIn = await authManager.isLoggedIn();
+    if (loggedIn) {
+      console.log('✅ Usuário já está logado, redirecionando para dashboard');
+      // URL CORRIGIDA
+      window.location.href = 'https://brainquiiz.netlify.app/dashboard.html';
+    }
+  }
+});
+
+console.log('✅ AuthManager corrigido com credenciais locais e URLs atualizadas!');
