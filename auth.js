@@ -140,9 +140,9 @@ class AuthManager {
     
     console.log('👋 Logout realizado');
     
-    // Redirecionar para página inicial - URL CORRIGIDA
+    // Redirecionar para página inicial
     if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
-      window.location.href = 'https://brainquiiz.netlify.app/index.html';
+      window.location.href = 'https://brainquiz-wel0.onrender.com/index.html';
     }
   }
 
@@ -250,8 +250,8 @@ class AuthManager {
       
       // Aguardar um pouco para mostrar mensagem de sucesso
       setTimeout(() => {
-        // Redirecionar para dashboard - URL CORRIGIDA
-        window.location.href = 'https://brainquiiz.netlify.app/dashboard.html';
+        // Redirecionar para dashboard
+        window.location.href = 'https://brainquiz-wel0.onrender.com/dashboard.html';
       }, 1000);
       
       return true;
@@ -342,8 +342,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     if (!loggedIn) {
       console.log('❌ Usuário não autenticado, redirecionando para login');
-      // URL CORRIGIDA
-      window.location.href = 'https://brainquiiz.netlify.app/index.html';
+      window.location.href = 'https://brainquiz-wel0.onrender.com/index.html';
     } else {
       console.log('✅ Usuário autenticado');
     }
@@ -352,8 +351,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loggedIn = await authManager.isLoggedIn();
     if (loggedIn) {
       console.log('✅ Usuário já está logado, redirecionando para dashboard');
-      // URL CORRIGIDA
-      window.location.href = 'https://brainquiiz.netlify.app/dashboard.html';
+      window.location.href = 'https://brainquiz-wel0.onrender.com/dashboard.html';
     }
   }
 });
