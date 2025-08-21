@@ -1125,12 +1125,12 @@ async function verificarUsuarioLogado() {
     }
     
     console.log('❌ Usuário não autenticado, redirecionando...');
-    window.location.href = 'https://brainquiiz.netlify.app/index.html';
+    window.location.href = 'https://brainquiz-wel0.onrender.com/index.html';
     return false;
     
   } catch (error) {
     console.error('❌ Erro ao verificar sessão:', error);
-    window.location.href = 'https://brainquiiz.netlify.app/index.html';
+    window.location.href = 'https://brainquiz-wel0.onrender.com/index.html';
     return false;
   }
 }
@@ -1145,7 +1145,7 @@ function configurarBotoesPrincipais() {
   // BOTÃO CRIAR QUIZ - URL CORRIGIDA PARA .APP
   createQuizBtn.onclick = () => {
     console.log('🔄 Redirecionando para criação de quiz...');
-    window.location.href = 'https://brainquiiz.netlify.app/painel.html';
+    window.location.href = 'https://brainquiz-wel0.onrender.com/quiz.html';
   };
 
   // BOTÃO SAIR - URL CORRIGIDA PARA .APP
@@ -1154,10 +1154,10 @@ function configurarBotoesPrincipais() {
       console.log('👋 Fazendo logout...');
       try {
         await authManager.logout();
-        window.location.href = 'https://brainquiiz.netlify.app/index.html';
+        window.location.href = 'https://brainquiz-wel0.onrender.com/index.html';
       } catch (error) {
         console.error('Erro no logout:', error);
-        window.location.href = 'https://brainquiiz.netlify.app/index.html';
+        window.location.href = 'https://brainquiz-wel0.onrender.com/index.html';
       }
     }
   };
@@ -1674,4 +1674,5 @@ console.log('🎯 DASHBOARD HTML TOTALMENTE CORRIGIDO - v9.0!');
 </script>
 </body>
 </html>
+
 
