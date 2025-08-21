@@ -4,9 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>🔥 Quiz BrainQuiz - Jogue Agora</title>
-  <script src="https://brainquiz-wel0.onrender.com/auth.js"></script>
-  <script src="https://brainquiz-wel0.onrender.com/quiz-manager.js"></script>
-  <link rel="stylesheet" href="https://brainquiz-wel0.onrender.com/system-styles.css">
   <style>
     body {
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
@@ -137,6 +134,7 @@
       box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
       transition: all 0.3s ease;
       z-index: 100;
+      text-decoration: none;
     }
 
     .voltar-inicio-btn:hover {
@@ -551,6 +549,319 @@
   </div>
 
   <script>
+    // Gerenciador de Quiz Principal
+    class QuizManager {
+      constructor() {
+        this.baseURL = 'https://brainquiz-wel0.onrender.com';
+        this.quizData = null;
+        this.currentQuestionIndex = 0;
+        this.selectedAnswers = [];
+        this.startTime = new Date();
+        this.quizId = null;
+        
+        // Pegar o ID do quiz da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        this.quizId = urlParams.get('id');
+        
+        if (!this.quizId) {
+          this.showError('ID do quiz não encontrado na URL');
+          return;
+        }
+        
+        this.init();
+      }
+
+      async init() {
+        try {
+          await this.loadQuiz();
+          this.renderQuiz();
+        } catch (error) {
+          console.error('Erro na inicialização:', error);
+          this.showError('Erro ao carregar o quiz');
+        }
+      }
+
+      async loadQuiz() {
+        try {
+          console.log('🔄 Carregando quiz ID:', this.quizId);
+          
+          const response = await fetch(`${this.baseURL}/api/quiz/${this.quizId}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+          }
+
+          this.quizData = await response.json();
+          console.log('✅ Quiz carregado:', this.quizData);
+
+          if (!this.quizData || !this.quizData.perguntas || this.quizData.perguntas.length === 0) {
+            throw new Error('Quiz não possui perguntas válidas');
+          }
+
+        } catch (error) {
+          console.error('❌ Erro ao carregar quiz:', error);
+          throw error;
+        }
+      }
+
+      renderQuiz() {
+        const container = document.getElementById('quiz-container');
+        const currentQuestion = this.quizData.perguntas[this.currentQuestionIndex];
+        
+        container.innerHTML = `
+          <div class="quiz-header">
+            <a href="${this.baseURL}/dashboard.html" class="voltar-inicio-btn">← Voltar</a>
+            
+            <h1 class="quiz-titulo">${this.quizData.titulo}</h1>
+            
+            <div class="pergunta-numero">
+              Pergunta ${this.currentQuestionIndex + 1} de ${this.quizData.perguntas.length}
+            </div>
+            
+            <div class="quiz-progresso">
+              <div class="progresso-barra">
+                <div class="progresso-preenchido" style="width: ${((this.currentQuestionIndex + 1) / this.quizData.perguntas.length) * 100}%"></div>
+              </div>
+              <div class="progresso-texto">
+                ${this.currentQuestionIndex + 1}/${this.quizData.perguntas.length} perguntas respondidas
+              </div>
+            </div>
+          </div>
+
+          <div class="quiz-content">
+            <div class="pergunta-container">
+              <div class="pergunta-card">
+                <h2 class="pergunta-titulo">Pergunta ${this.currentQuestionIndex + 1}</h2>
+                <p class="pergunta-texto">${currentQuestion.pergunta}</p>
+                
+                <div class="alternativas-container">
+                  ${currentQuestion.alternativas.map((alt, index) => `
+                    <div class="alternativa-item" data-index="${index}">
+                      <input type="radio" name="resposta" value="${index}" id="alt-${index}">
+                      <div class="alternativa-texto">${alt}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+
+            <div class="quiz-controls">
+              <button class="btn btn-secondary" id="btn-anterior" ${this.currentQuestionIndex === 0 ? 'disabled' : ''}>
+                ← Anterior
+              </button>
+              
+              <button class="btn btn-primary" id="btn-proximo" disabled>
+                ${this.currentQuestionIndex === this.quizData.perguntas.length - 1 ? 'Finalizar Quiz' : 'Próxima →'}
+              </button>
+            </div>
+          </div>
+
+          <div class="quiz-footer">
+            <button class="btn btn-outline-danger" onclick="if(confirm('Deseja realmente abandonar o quiz?')) window.location.href='${this.baseURL}/dashboard.html'">
+              Abandonar Quiz
+            </button>
+          </div>
+        `;
+
+        this.bindEvents();
+      }
+
+      bindEvents() {
+        // Eventos das alternativas
+        const alternativas = document.querySelectorAll('.alternativa-item');
+        alternativas.forEach(item => {
+          item.addEventListener('click', () => {
+            const index = parseInt(item.dataset.index);
+            this.selectAnswer(index);
+          });
+        });
+
+        // Botão anterior
+        const btnAnterior = document.getElementById('btn-anterior');
+        if (btnAnterior) {
+          btnAnterior.addEventListener('click', () => this.previousQuestion());
+        }
+
+        // Botão próximo
+        const btnProximo = document.getElementById('btn-proximo');
+        if (btnProximo) {
+          btnProximo.addEventListener('click', () => this.nextQuestion());
+        }
+      }
+
+      selectAnswer(answerIndex) {
+        // Remover seleção anterior
+        document.querySelectorAll('.alternativa-item').forEach(item => {
+          item.classList.remove('selected');
+        });
+
+        // Adicionar nova seleção
+        const selectedItem = document.querySelector(`[data-index="${answerIndex}"]`);
+        selectedItem.classList.add('selected');
+
+        // Salvar resposta
+        this.selectedAnswers[this.currentQuestionIndex] = answerIndex;
+
+        // Habilitar botão próximo
+        document.getElementById('btn-proximo').disabled = false;
+      }
+
+      previousQuestion() {
+        if (this.currentQuestionIndex > 0) {
+          this.currentQuestionIndex--;
+          this.renderQuiz();
+          
+          // Restaurar seleção se existir
+          const savedAnswer = this.selectedAnswers[this.currentQuestionIndex];
+          if (savedAnswer !== undefined) {
+            setTimeout(() => {
+              this.selectAnswer(savedAnswer);
+            }, 100);
+          }
+        }
+      }
+
+      nextQuestion() {
+        if (this.currentQuestionIndex < this.quizData.perguntas.length - 1) {
+          this.currentQuestionIndex++;
+          this.renderQuiz();
+          
+          // Restaurar seleção se existir
+          const savedAnswer = this.selectedAnswers[this.currentQuestionIndex];
+          if (savedAnswer !== undefined) {
+            setTimeout(() => {
+              this.selectAnswer(savedAnswer);
+            }, 100);
+          }
+        } else {
+          this.finishQuiz();
+        }
+      }
+
+      async finishQuiz() {
+        try {
+          // Calcular score
+          let score = 0;
+          const results = [];
+
+          this.quizData.perguntas.forEach((pergunta, index) => {
+            const userAnswer = this.selectedAnswers[index];
+            const isCorrect = userAnswer === pergunta.resposta_correta;
+            
+            if (isCorrect) score++;
+            
+            results.push({
+              pergunta: pergunta.pergunta,
+              respostaCorreta: pergunta.alternativas[pergunta.resposta_correta],
+              respostaUsuario: pergunta.alternativas[userAnswer],
+              correto: isCorrect,
+              explicacao: pergunta.explicacao
+            });
+          });
+
+          const endTime = new Date();
+          const tempoGasto = Math.round((endTime - this.startTime) / 1000);
+          const porcentagem = Math.round((score / this.quizData.perguntas.length) * 100);
+
+          // Salvar resultado no backend
+          await this.saveResult(score, porcentagem, tempoGasto);
+
+          // Mostrar resultado
+          this.showResult(score, porcentagem, tempoGasto, results);
+
+        } catch (error) {
+          console.error('Erro ao finalizar quiz:', error);
+          this.showError('Erro ao finalizar quiz');
+        }
+      }
+
+      async saveResult(score, porcentagem, tempoGasto) {
+        try {
+          const token = localStorage.getItem('token');
+          
+          const response = await fetch(`${this.baseURL}/api/quiz-result`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              quiz_id: this.quizId,
+              score: score,
+              total_questions: this.quizData.perguntas.length,
+              time_spent: tempoGasto,
+              answers: this.selectedAnswers
+            })
+          });
+
+          if (!response.ok) {
+            console.warn('Erro ao salvar resultado, mas continuando...');
+          }
+        } catch (error) {
+          console.warn('Erro ao salvar resultado:', error);
+        }
+      }
+
+      showResult(score, porcentagem, tempoGasto, results) {
+        const container = document.getElementById('quiz-container');
+        
+        container.innerHTML = `
+          <div class="resultado-header">
+            <h1 class="quiz-titulo">🎉 Quiz Finalizado!</h1>
+            <div class="resultado-score">
+              <div class="score-circle">
+                <span class="score-numero">${porcentagem}%</span>
+              </div>
+              <p>Você acertou ${score} de ${this.quizData.perguntas.length} perguntas</p>
+              <p>Tempo gasto: ${tempoGasto} segundos</p>
+            </div>
+          </div>
+
+          <div class="resultado-detalhes">
+            <h3 style="color: #0af; text-align: center; margin-bottom: 20px;">📋 Revisão das Respostas</h3>
+            
+            ${results.map((result, index) => `
+              <div class="pergunta-resultado ${result.correto ? 'acerto' : 'erro'}">
+                <h4>Pergunta ${index + 1} - ${result.correto ? '✅ Correto' : '❌ Incorreto'}</h4>
+                <div class="pergunta-texto">${result.pergunta}</div>
+                <p><strong>Sua resposta:</strong> ${result.respostaUsuario}</p>
+                ${!result.correto ? `<p><strong>Resposta correta:</strong> ${result.respostaCorreta}</p>` : ''}
+                ${result.explicacao ? `<div class="explicacao">💡 ${result.explicacao}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="resultado-acoes">
+            <button class="btn btn-primary" onclick="location.reload()">
+              🔄 Jogar Novamente
+            </button>
+            <button class="btn btn-secondary" onclick="window.location.href='${this.baseURL}/dashboard.html'">
+              🏠 Voltar ao Dashboard
+            </button>
+          </div>
+        `;
+      }
+
+      showError(message) {
+        const container = document.getElementById('quiz-container');
+        container.innerHTML = `
+          <div class="error-message">
+            <h3>❌ Erro</h3>
+            <p>${message}</p>
+            <button class="btn btn-primary" onclick="window.location.href='${this.baseURL}/dashboard.html'" style="margin-top: 15px;">
+              🏠 Voltar ao Dashboard
+            </button>
+          </div>
+        `;
+      }
+    }
+
     // Criar partículas animadas
     function criarParticulas() {
       const container = document.querySelector('.particles');
@@ -573,6 +884,7 @@
     // Inicializar quando carregar
     window.addEventListener('load', () => {
       criarParticulas();
+      new QuizManager();
     });
 
     console.log('✅ Quiz com layout moderno carregado!');
