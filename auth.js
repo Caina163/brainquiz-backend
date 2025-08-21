@@ -142,7 +142,7 @@ class AuthManager {
     
     // Redirecionar para página inicial
     if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
-      window.location.href = 'https://brainquiz-wel0.onrender.com/index.html';
+      window.location.href = `${this.baseURL}/index.html`;
     }
   }
 
@@ -251,7 +251,7 @@ class AuthManager {
       // Aguardar um pouco para mostrar mensagem de sucesso
       setTimeout(() => {
         // Redirecionar para dashboard
-        window.location.href = 'https://brainquiz-wel0.onrender.com/dashboard.html';
+        window.location.href = `${this.baseURL}/dashboard.html`;
       }, 1000);
       
       return true;
@@ -319,6 +319,34 @@ class AuthManager {
       }
     }, 4000);
   }
+
+  // ============================================================================
+  // FUNÇÃO PARA VERIFICAR SE A PÁGINA PRECISA DE AUTENTICAÇÃO
+  // ============================================================================
+  isPaginaPublica() {
+    const pathname = window.location.pathname;
+    const filename = pathname.split('/').pop() || 'index.html';
+    
+    // Lista de páginas que NÃO precisam de autenticação
+    const paginasPublicas = [
+      'index.html',
+      'cadastro.html',
+      'login.html',
+      '', // Para root path
+      '/'
+    ];
+    
+    // Verificar se é página pública
+    const isPublic = paginasPublicas.includes(filename) || 
+                     pathname === '/' || 
+                     pathname === '' ||
+                     pathname.includes('index.html') ||
+                     pathname.includes('cadastro.html') ||
+                     pathname.includes('login.html');
+    
+    console.log(`📄 Página atual: ${pathname} (${filename}) - Pública: ${isPublic}`);
+    return isPublic;
+  }
 }
 
 // Instância global
@@ -329,31 +357,41 @@ window.fazerLogin = async function(event) {
   return await authManager.processarLogin(event);
 };
 
-// Verificação automática ao carregar qualquer página (exceto login)
+// ============================================================================
+// VERIFICAÇÃO AUTOMÁTICA CORRIGIDA - NÃO INTERFERE NO CADASTRO
+// ============================================================================
 document.addEventListener('DOMContentLoaded', async () => {
-  const pathname = window.location.pathname;
-  const isLoginPage = pathname === '/' || pathname === '/index.html' || pathname.includes('index.html');
+  const isPaginaPublica = authManager.isPaginaPublica();
   
-  // Só verificar se NÃO está na página de login
-  if (!isLoginPage) {
-    console.log('🔍 Verificando autenticação...');
+  if (isPaginaPublica) {
+    console.log('🔓 Página pública - acesso livre permitido');
+    
+    // Se está na página de login e já está logado, redirecionar para dashboard
+    const pathname = window.location.pathname;
+    const isLoginPage = pathname === '/' || pathname === '/index.html' || pathname.includes('index.html');
+    
+    if (isLoginPage) {
+      const loggedIn = await authManager.isLoggedIn();
+      if (loggedIn) {
+        console.log('✅ Usuário já está logado, redirecionando para dashboard');
+        window.location.href = `${authManager.baseURL}/dashboard.html`;
+      }
+    }
+    
+  } else {
+    // Página privada - verificar autenticação
+    console.log('🔒 Página privada - verificando autenticação...');
     
     const loggedIn = await authManager.isLoggedIn();
     
     if (!loggedIn) {
       console.log('❌ Usuário não autenticado, redirecionando para login');
-      window.location.href = 'https://brainquiz-wel0.onrender.com/index.html';
+      window.location.href = `${authManager.baseURL}/index.html`;
     } else {
-      console.log('✅ Usuário autenticado');
-    }
-  } else {
-    // Se está na página de login e já está logado, redirecionar para dashboard
-    const loggedIn = await authManager.isLoggedIn();
-    if (loggedIn) {
-      console.log('✅ Usuário já está logado, redirecionando para dashboard');
-      window.location.href = 'https://brainquiz-wel0.onrender.com/dashboard.html';
+      console.log('✅ Usuário autenticado - acesso permitido');
     }
   }
 });
 
-console.log('✅ AuthManager conectado ao Render: https://brainquiz-wel0.onrender.com');
+console.log('✅ AuthManager CORRIGIDO - cadastro.html agora funciona!');
+console.log('📡 Backend: https://brainquiz-wel0.onrender.com');
