@@ -47,7 +47,7 @@ class LoginManager {
       const usuarioLogado = await authManager.getUsuarioAtual();
       if (usuarioLogado) {
         console.log('✅ Usuário já está logado, redirecionando...');
-        window.location.href = 'https://brainquiiz.netlify.app/dashboard.html';
+        window.location.href = 'https://brainquiz-wel0.onrender.com/dashboard.html';
       }
     } catch (error) {
       console.log('Usuário não está logado, permanecer na tela de login');
@@ -99,7 +99,7 @@ class LoginManager {
         
         // Pequeno delay para mostrar sucesso antes de redirecionar
         setTimeout(() => {
-          window.location.href = 'https://brainquiiz.netlify.app/dashboard.html';
+          window.location.href = 'https://brainquiz-wel0.onrender.com/dashboard.html';
         }, 1500);
         
       } else {
@@ -303,3 +303,5 @@ document.addEventListener('DOMContentLoaded', () => {
     loginManager.inicializar();
   }
 });
+
+console.log('✅ LoginManager conectado ao Render: https://brainquiz-wel0.onrender.com');
