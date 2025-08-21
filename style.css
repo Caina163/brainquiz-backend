@@ -1,6 +1,6 @@
 /* =====================================================================
-   SYSTEM-STYLES.CSS - BRAINQUIZ COMPLETO INTEGRADO
-   Base + Dashboard + Novos layouts para dashboard conforme imagens
+   STYLE.CSS - BRAINQUIZ COMPLETO
+   Base + Novos layouts para dashboard conforme imagens de referência
    ===================================================================== */
 
 /* Reset básico - CORRIGIDO para não quebrar outros estilos */
@@ -14,54 +14,16 @@
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: black;
-  background: linear-gradient(135deg, #000 0%, #1a1a2e 50%, #16213e 100%);
-  margin: 0;
-  padding: 20px;
-  min-height: 100vh;
-  position: relative;
-  overflow-x: hidden;
+  background-color: #000;
 }
 
 mark {
-  background-color: #0af;
+  background-color:  #0af;
   color: black;
+ 
 }
 
-/* =====================================================================
-   PARTICLES ANIMATION - DASHBOARD
-   ===================================================================== */
-
-.particles {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: -1;
-}
-
-.particle {
-  position: absolute;
-  width: 2px;
-  height: 2px;
-  background: #0af;
-  border-radius: 50%;
-  animation: float 8s infinite linear;
-  box-shadow: 0 0 10px #0af;
-}
-
-@keyframes float {
-  0% { transform: translateY(100vh) translateX(0px); opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { transform: translateY(-100px) translateX(100px); opacity: 0; }
-}
-
-/* =====================================================================
-   CONTAINER GERAL E FORMULÁRIOS BÁSICOS
-   ===================================================================== */
-
+/* Container geral */
 .container {
   max-width: 400px;
   margin: 60px auto;
@@ -75,16 +37,9 @@ mark {
 /* Títulos */
 h1, h2 {
   margin-bottom: 20px;
-  text-shadow: 0 0 20px #0af;
+  text-shadow: 0 0 10px #0af;
   color: #0af;
   background: transparent;
-  font-size: 2.5rem;
-  animation: pulse 3s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { text-shadow: 0 0 20px #0af; }
-  50% { text-shadow: 0 0 40px #0af, 0 0 60px #0af; }
 }
 
 /* Formulários */
@@ -153,28 +108,19 @@ button:hover {
   color: #0ff;
 }
 
-/* =====================================================================
-   HEADER DO DASHBOARD
-   ===================================================================== */
-
+/* Header do painel */
 header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 1200px;
-  margin: 0 auto 20px;
-  background: rgba(17, 17, 17, 0.8);
-  padding: 20px 30px;
-  border-radius: 15px;
-  backdrop-filter: blur(10px);
-  border: 2px solid rgba(0, 170, 255, 0.3);
-  box-shadow: 0 0 30px rgba(0, 170, 255, 0.2);
+  padding: 20px 40px;
+  background-color: #111;
+  box-shadow: 0 0 10px #0af;
 }
 
 header h1 {
   color: #0af;
   background: transparent;
-  margin: 0;
 }
 
 header nav a {
@@ -189,344 +135,81 @@ header nav a:hover {
   color: #0ff;
 }
 
-.header-buttons {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-}
-
-#createQuizBtn, #exitBtn {
-  background: linear-gradient(45deg, #0af, #08c);
-  border: none;
-  border-radius: 10px;
-  padding: 12px 24px;
-  color: #000;
-  font-weight: bold;
-  cursor: pointer;
-  box-shadow: 0 5px 20px rgba(0, 170, 255, 0.3);
-  transition: all 0.3s ease;
-}
-
-#createQuizBtn:hover, #exitBtn:hover {
-  background: linear-gradient(45deg, #08c, #0af);
-  color: #fff;
-  box-shadow: 0 8px 30px rgba(0, 170, 255, 0.6);
-  transform: translateY(-3px);
-}
-
-#exitBtn {
-  background: linear-gradient(45deg, #ff4444, #cc0000);
-  box-shadow: 0 5px 20px rgba(255, 68, 68, 0.3);
-}
-
-#exitBtn:hover {
-  background: linear-gradient(45deg, #cc0000, #ff4444);
-  box-shadow: 0 8px 30px rgba(255, 68, 68, 0.6);
-}
-
-/* =====================================================================
-   TABS DO DASHBOARD
-   ===================================================================== */
-
-#tabs {
-  max-width: 1200px;
-  margin: 0 auto 20px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
-  background: rgba(17, 17, 17, 0.6);
-  padding: 15px;
-  border-radius: 15px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(0, 170, 255, 0.2);
-}
-
-.tab-button {
-  background: rgba(34, 34, 34, 0.8);
-  border: none;
-  border-radius: 10px;
-  padding: 12px 20px;
-  color: #0af;
-  cursor: pointer;
-  box-shadow: 0 5px 15px rgba(0, 170, 255, 0.2);
-  font-weight: bold;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-}
-
-.tab-button.active, .tab-button:hover {
-  background: linear-gradient(45deg, #0af, #08c);
-  color: #000;
-  box-shadow: 0 8px 25px rgba(0, 170, 255, 0.4);
-  transform: translateY(-2px);
-}
-
-/* =====================================================================
-   MAIN CONTAINER
-   ===================================================================== */
-
+/* Main painel */
 main {
   padding: 20px 40px;
   background: transparent;
 }
 
-#quizzesContainer {
-  max-width: 1200px;
-  margin: 0 auto;
-  min-height: 200px;
-}
-
-.section-container {
-  margin-bottom: 40px;
-}
-
-/* =====================================================================
-   MODAL CENTRALIZADO E BONITO PARA EDIÇÃO
-   ===================================================================== */
-
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  backdrop-filter: blur(8px);
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; backdrop-filter: blur(0px); }
-  to { opacity: 1; backdrop-filter: blur(8px); }
-}
-
-.modal-content {
-  background: linear-gradient(145deg, rgba(26, 26, 46, 0.95), rgba(22, 33, 62, 0.95));
-  border-radius: 20px;
-  max-width: 550px;
-  width: 90%;
-  max-height: 85vh;
-  overflow-y: auto;
-  border: 3px solid rgba(0, 170, 255, 0.5);
-  backdrop-filter: blur(20px);
-  box-shadow: 
-    0 25px 50px rgba(0, 0, 0, 0.9),
-    0 0 100px rgba(0, 170, 255, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  animation: modalSlideIn 0.4s ease-out;
-}
-
-@keyframes modalSlideIn {
-  from { 
-    opacity: 0; 
-    transform: translateY(-50px) scale(0.9); 
-  }
-  to { 
-    opacity: 1; 
-    transform: translateY(0) scale(1); 
-  }
-}
-
-.modal-header {
-  padding: 25px 30px;
-  border-bottom: 2px solid rgba(0, 170, 255, 0.4);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: linear-gradient(135deg, rgba(0, 170, 255, 0.1), rgba(8, 204, 255, 0.05));
-  border-radius: 17px 17px 0 0;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: #0af;
-  text-shadow: 0 0 15px rgba(0, 170, 255, 0.7);
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-.btn-close {
-  background: rgba(255, 68, 68, 0.2);
-  border: 2px solid rgba(255, 68, 68, 0.5);
-  color: #ff4444;
-  font-size: 1.8rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  font-weight: bold;
-}
-
-.btn-close:hover {
-  background: rgba(255, 68, 68, 0.4);
-  border-color: #ff4444;
-  transform: scale(1.1) rotate(90deg);
-  box-shadow: 0 0 20px rgba(255, 68, 68, 0.5);
-}
-
-.modal-body {
-  padding: 30px;
-}
-
-.form-group {
-  margin-bottom: 25px;
-  position: relative;
-}
-
-.form-group label {
-  display: block;
+/* Lista de quizzes */
+#quizzes-list > div {
+  background: #111;
   margin-bottom: 10px;
+  padding: 10px 15px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px #0af;
+  cursor: default;
+  user-select: none;
   color: #0af;
-  font-weight: 600;
-  font-size: 1rem;
-  text-shadow: 0 0 5px rgba(0, 170, 255, 0.3);
 }
 
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 15px 20px;
-  background: rgba(17, 17, 17, 0.8);
-  border: 2px solid rgba(0, 170, 255, 0.3);
-  border-radius: 12px;
-  color: #0af;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  box-sizing: border-box;
-  backdrop-filter: blur(10px);
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #0af;
-  box-shadow: 
-    0 0 20px rgba(0, 170, 255, 0.4),
-    inset 0 0 10px rgba(0, 170, 255, 0.1);
-  background: rgba(17, 17, 17, 0.9);
-  transform: translateY(-2px);
-}
-
-.form-group input::placeholder {
-  color: rgba(0, 170, 255, 0.5);
-}
-
-.senha-required {
-  border-color: rgba(255, 193, 7, 0.6) !important;
-  background: rgba(255, 193, 7, 0.05);
-}
-
-.senha-required label {
-  color: #ffc107;
-  text-shadow: 0 0 5px rgba(255, 193, 7, 0.5);
-}
-
-.modal-footer {
-  padding: 25px 30px;
-  border-top: 2px solid rgba(0, 170, 255, 0.3);
-  display: flex;
-  gap: 15px;
-  justify-content: flex-end;
-  background: linear-gradient(135deg, rgba(0, 170, 255, 0.05), rgba(8, 204, 255, 0.02));
-  border-radius: 0 0 17px 17px;
-}
-
-/* =====================================================================
-   BOTÕES PADRÃO
-   ===================================================================== */
-
-.btn {
-  padding: 12px 25px;
-  border: none;
+/* Quiz editor */
+#quiz-editor {
+  background: #111;
+  padding: 20px;
+  margin-top: 30px;
   border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 1rem;
-  position: relative;
-  overflow: hidden;
-  text-decoration: none;
-  display: inline-block;
-  text-align: center;
+  box-shadow: 0 0 15px #0af;
 }
 
-.btn::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  transition: all 0.3s ease;
-  transform: translate(-50%, -50%);
+#quiz-editor form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
-.btn:hover::before {
-  width: 100%;
-  height: 100%;
+#quiz-editor input,
+#quiz-editor textarea {
+  background: #222;
+  color: #0af;
+  border-radius: 6px;
+  padding: 10px;
+  border: none;
+  box-shadow: inset 0 0 8px #0af;
 }
 
-.btn-primary {
-  background: linear-gradient(45deg, #0af, #08c);
-  color: #000;
-  box-shadow: 0 5px 15px rgba(0, 170, 255, 0.3);
-}
-
-.btn-primary:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(0, 170, 255, 0.5);
-  background: linear-gradient(45deg, #08c, #0af);
-}
-
-.btn-secondary {
-  background: linear-gradient(45deg, rgba(108, 117, 125, 0.8), rgba(90, 98, 104, 0.8));
-  color: #fff;
-  box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
-}
-
-.btn-secondary:hover {
-  background: linear-gradient(45deg, rgba(108, 117, 125, 1), rgba(90, 98, 104, 1));
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
-}
-
-.btn-success {
-  background: linear-gradient(45deg, #28a745, #20c997);
-  color: #fff;
-}
-
-.btn-success:hover {
-  background: linear-gradient(45deg, #20c997, #28a745);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
-}
-
-.btn-danger {
-  background: linear-gradient(45deg, #dc3545, #c82333);
-  color: #fff;
-}
-
-.btn-danger:hover {
-  background: linear-gradient(45deg, #c82333, #dc3545);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+#quiz-editor button {
+  width: 120px;
+  align-self: flex-start;
 }
 
 /* =====================================================================
-   SEÇÕES DO DASHBOARD
+   NOVOS ESTILOS PARA DASHBOARD - LAYOUTS DAS IMAGENS
    ===================================================================== */
 
+/* Animações */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(0, 170, 255, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(0, 170, 255, 0.6); }
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-5px); }
+  60% { transform: translateY(-2px); }
+}
+
+/* Seções do Dashboard */
 .section-header {
   color: #0af;
   font-size: 1.8rem;
@@ -550,12 +233,6 @@ main {
   color: #0af;
   margin: 0;
   text-shadow: 0 0 10px #0af;
-}
-
-.section-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
 }
 
 /* =====================================================================
@@ -708,7 +385,7 @@ main {
 }
 
 /* =====================================================================
-   USUARIOS GRID - CONFORME IMAGEM 3 (Avatares A/M/U)
+   USUARIOS GRID - CONFORME IMAGEM 3 (Avatares A/M/A)
    ===================================================================== */
 
 .usuarios-grid {
@@ -775,7 +452,7 @@ main {
   box-shadow: 0 0 20px rgba(255, 167, 38, 0.4);
 }
 
-.user-avatar-circle.usuario {
+.user-avatar-circle.aluno {
   background: linear-gradient(45deg, #66bb6a, #81c784);
   box-shadow: 0 0 20px rgba(102, 187, 106, 0.4);
 }
@@ -937,10 +614,6 @@ main {
 .cadastro-actions {
   display: flex;
   gap: 10px;
-}
-
-.cadastro-actions .btn {
-  flex: 1;
 }
 
 /* =====================================================================
@@ -1136,51 +809,7 @@ main {
 }
 
 /* =====================================================================
-   QUIZ EDITOR - PAINEL DE CRIAÇÃO
-   ===================================================================== */
-
-#quizzes-list > div {
-  background: #111;
-  margin-bottom: 10px;
-  padding: 10px 15px;
-  border-radius: 8px;
-  box-shadow: 0 0 10px #0af;
-  cursor: default;
-  user-select: none;
-  color: #0af;
-}
-
-#quiz-editor {
-  background: #111;
-  padding: 20px;
-  margin-top: 30px;
-  border-radius: 10px;
-  box-shadow: 0 0 15px #0af;
-}
-
-#quiz-editor form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-#quiz-editor input,
-#quiz-editor textarea {
-  background: #222;
-  color: #0af;
-  border-radius: 6px;
-  padding: 10px;
-  border: none;
-  box-shadow: inset 0 0 8px #0af;
-}
-
-#quiz-editor button {
-  width: 120px;
-  align-self: flex-start;
-}
-
-/* =====================================================================
-   ESTADOS VAZIOS E LOADING
+   ESTADOS VAZIOS
    ===================================================================== */
 
 .empty-state {
@@ -1214,215 +843,72 @@ main {
   color: #999;
 }
 
-.loading {
-  text-align: center;
-  color: #0af;
-  font-style: italic;
-  padding: 40px;
-  animation: pulse 2s infinite;
-}
-
-.error {
-  color: #ff4444;
-  background: rgba(255, 68, 68, 0.1);
-  padding: 15px;
-  border-radius: 10px;
-  margin: 10px 0;
-  border: 1px solid rgba(255, 68, 68, 0.3);
-  backdrop-filter: blur(5px);
-}
-
-#mensagemSucesso {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: linear-gradient(135deg, #0af, #08c);
-  color: #000;
-  padding: 15px 25px;
-  border-radius: 10px;
-  font-weight: bold;
-  box-shadow: 0 8px 25px rgba(0,170,255,0.4);
-  z-index: 1000;
-  opacity: 0;
-  transform: translateX(100%);
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-}
-
-#mensagemSucesso.show {
-  opacity: 1;
-  transform: translateX(0);
-}
-
 /* =====================================================================
-   CALENDAR STYLES - EXATO COMO A SEGUNDA FOTO
+   BOTÕES PADRÃO
    ===================================================================== */
 
-.calendar-container {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  border-radius: 20px;
-  padding: 40px;
-  box-shadow: 0 20px 40px rgba(0,170,255,0.3);
-  border: 2px solid rgba(0,170,255,0.4);
-  backdrop-filter: blur(15px);
-  overflow-x: auto;
-  min-height: 600px;
-}
-
-.calendar-header {
-  text-align: center;
-  margin-bottom: 40px;
-}
-
-.calendar-title {
-  color: #fff;
-  font-size: 2.5rem;
-  font-weight: bold;
-  margin-bottom: 30px;
-  text-shadow: 0 0 20px rgba(255,255,255,0.5);
-  background: linear-gradient(45deg, #0af, #fff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.calendar-legend {
-  display: flex;
-  justify-content: center;
-  gap: 30px;
-  margin-bottom: 30px;
-  flex-wrap: wrap;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  border-radius: 25px;
-  font-weight: bold;
-  font-size: 1rem;
-  backdrop-filter: blur(10px);
-  border: 2px solid;
-}
-
-.legend-current {
-  background: rgba(34, 197, 94, 0.2);
-  color: #22c55e;
-  border-color: #22c55e;
-}
-
-.legend-future {
-  background: rgba(99, 102, 241, 0.2);
-  color: #6366f1;
-  border-color: #6366f1;
-}
-
-.legend-past {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  border-color: #ef4444;
-}
-
-.calendar-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-  font-size: 1rem;
-  border-radius: 15px;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-}
-
-.calendar-table th {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  color: #fff;
-  padding: 20px 15px;
-  text-align: center;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-size: 1.1rem;
+.btn {
+  padding: 10px 20px;
   border: none;
-}
-
-.calendar-table td {
-  padding: 15px;
-  text-align: center;
-  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
   transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
 }
 
-.calendar-table tr:hover td {
-  background: rgba(0,170,255,0.1);
-  transform: scale(1.02);
+.btn-primary {
+  background: linear-gradient(45deg, #0af, #08c);
+  color: #000;
 }
 
-.period-header {
-  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
-  color: #000 !important;
-  font-weight: bold;
-  font-size: 1.1rem;
+.btn-primary:hover {
+  background: linear-gradient(45deg, #08c, #0af);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 170, 255, 0.4);
 }
 
-.current-period {
-  background: linear-gradient(135deg, #22c55e, #16a34a) !important;
-  color: #fff !important;
-  font-weight: bold;
-  animation: glow-green 2s infinite alternate;
-  position: relative;
+.btn-success {
+  background: linear-gradient(45deg, #28a745, #20c997);
+  color: #fff;
 }
 
-@keyframes glow-green {
-  from { box-shadow: 0 0 20px rgba(34, 197, 94, 0.6); }
-  to { box-shadow: 0 0 30px rgba(34, 197, 94, 0.9), 0 0 40px rgba(34, 197, 94, 0.5); }
+.btn-success:hover {
+  background: linear-gradient(45deg, #20c997, #28a745);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
 }
 
-.future-period {
-  background: rgba(99, 102, 241, 0.3);
-  color: #a5b4fc;
+.btn-danger {
+  background: linear-gradient(45deg, #dc3545, #c82333);
+  color: #fff;
 }
 
-.past-period {
-  background: rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
+.btn-danger:hover {
+  background: linear-gradient(45deg, #c82333, #dc3545);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
 }
 
-.completion-info {
-  background: linear-gradient(135deg, #059669, #047857) !important;
-  color: #fff !important;
-  font-weight: bold;
-  font-size: 1.2rem;
+.btn-secondary {
+  background: linear-gradient(45deg, #6c757d, #5a6268);
+  color: #fff;
 }
 
-/* =====================================================================
-   ANIMAÇÕES ADICIONAIS
-   ===================================================================== */
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(0, 170, 255, 0.3); }
-  50% { box-shadow: 0 0 30px rgba(0, 170, 255, 0.6); }
-}
-
-@keyframes bounce {
-  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-5px); }
-  60% { transform: translateY(-2px); }
+.btn-secondary:hover {
+  background: linear-gradient(45deg, #5a6268, #6c757d);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
 }
 
 /* =====================================================================
-   RESPONSIVIDADE COMPLETA
+   RESPONSIVIDADE
    ===================================================================== */
 
 @media (max-width: 768px) {
-  body {
-    padding: 10px;
-  }
-
   .quiz-grid, .usuarios-grid, .cadastros-grid, .pdfs-grid, .items-grid {
     grid-template-columns: 1fr;
     gap: 15px;
@@ -1432,9 +918,6 @@ main {
   .quiz-card-ativo, .user-card-gerencial, .cadastro-card-pendente, 
   .pdf-card-gerencial, .item-card {
     margin: 0 10px;
-    width: 100%;
-    max-width: 400px;
-    justify-self: center;
   }
 
   .user-card-gerencial {
@@ -1495,48 +978,6 @@ main {
     height: 70px;
     font-size: 2rem;
   }
-
-  header {
-    flex-direction: column;
-    gap: 20px;
-    text-align: center;
-  }
-
-  .header-buttons {
-    justify-content: center;
-  }
-
-  .calendar-container {
-    padding: 20px;
-  }
-
-  .calendar-table {
-    font-size: 0.9rem;
-  }
-
-  .calendar-table th,
-  .calendar-table td {
-    padding: 10px 8px;
-  }
-
-  .calendar-legend {
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-  }
-
-  .calendar-title {
-    font-size: 2rem;
-  }
-
-  .modal-content {
-    width: 95%;
-    margin: 10px;
-  }
-
-  #tabs {
-    justify-content: center;
-  }
 }
 
 @media (max-width: 480px) {
@@ -1565,6 +1006,6 @@ main {
   }
 
   .user-name {
-    font-size: 1.1rem;
-  }
-}
+    font-size: 1.1rem
+
+
