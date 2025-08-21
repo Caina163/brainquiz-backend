@@ -416,6 +416,7 @@
     const questionImagePreview = document.getElementById('questionImagePreview');
     const questionButtonsContainer = document.getElementById('questionButtonsContainer');
 
+    // ESTRUTURA PADRONIZADA - Campos consistentes em todo o sistema
     let quizData = {
       titulo: '',
       imagem: null,
@@ -434,7 +435,7 @@
       try {
         const usuario = await authManager.getUsuarioAtual();
         if (usuario) {
-          console.log('Usuário autenticado:', usuario.usuario);
+          console.log('Usuario autenticado:', usuario.usuario);
           return usuario;
         }
         return false;
@@ -742,12 +743,12 @@
           texto: '',
           imagem: null,
           alternativas: [],
-          resposta_certa: 0
+          resposta_correta: 0  // PADRONIZADO: sempre 'resposta_correta'
         };
       }
 
       const pergunta = quizData.perguntas[currentQuestionIndex];
-      pergunta.texto = questionTextInput.value.trim();
+      pergunta.texto = questionTextInput.value.trim();  // PADRONIZADO: sempre 'texto'
 
       const alternativesInputs = document.querySelectorAll('.alternative-input input');
       pergunta.alternativas = [];
@@ -755,7 +756,7 @@
         pergunta.alternativas.push(input.value.trim());
       });
 
-      pergunta.resposta_certa = 0;
+      pergunta.resposta_correta = 0;  // PADRONIZADO: primeira alternativa sempre correta
     }
 
     // ============================================================================
@@ -777,7 +778,7 @@
           texto: '',
           imagem: null,
           alternativas: ['', '', ''],
-          resposta_certa: 0
+          resposta_correta: 0
         });
       }
 
@@ -795,7 +796,7 @@
           texto: '',
           imagem: null,
           alternativas: ['', '', ''],
-          resposta_certa: 0
+          resposta_correta: 0
         });
         currentQuestionIndex++;
         criarBotoesQuestoes();
@@ -823,7 +824,7 @@
     });
 
     // ============================================================================
-    // FUNÇÃO PRINCIPAL DE SALVAMENTO
+    // FUNÇÃO PRINCIPAL DE SALVAMENTO - SEM localStorage
     // ============================================================================
 
     saveQuizBtn.addEventListener('click', async () => {
@@ -877,17 +878,17 @@
          }
        }
 
-       // Preparar dados para salvamento
+       // ESTRUTURA PADRONIZADA para salvamento
        const quizParaSalvar = {
          titulo: quizData.titulo,
          nome: quizData.titulo,
          imagem: quizData.imagem,
          imagemBase64: quizData.imagem,
          perguntas: quizData.perguntas.map(p => ({
-           texto: p.texto.trim(),
+           texto: p.texto.trim(),              // PADRONIZADO: 'texto'
            imagem: p.imagem,
            alternativas: p.alternativas.filter(alt => alt && alt.trim() !== ''),
-           resposta_certa: 0
+           resposta_correta: 0                 // PADRONIZADO: 'resposta_correta'
          })),
          configuracoes: {
            criadoEm: new Date().toISOString(),
@@ -897,64 +898,40 @@
 
        console.log('Preparando para salvar quiz:', quizParaSalvar);
 
-       let salvamentoSucesso = false;
+       // SALVAR APENAS NO BACKEND - SEM localStorage
+       const endpoint = editingQuizId ? 
+         `https://brainquiz-wel0.onrender.com/api/quizzes/${editingQuizId}` : 
+         'https://brainquiz-wel0.onrender.com/api/quizzes';
+       
+       const method = editingQuizId ? 'PUT' : 'POST';
+       
+       const response = await authManager.makeAuthenticatedRequest(endpoint, {
+         method: method,
+         body: JSON.stringify(quizParaSalvar)
+       });
 
-       // Tentar salvar no backend
-       try {
-         console.log('Tentando salvar no backend...');
-         
-         const response = await authManager.makeAuthenticatedRequest('https://brainquiz-wel0.onrender.com/api/quizzes', {
-           method: 'POST',
-           body: JSON.stringify(quizParaSalvar)
-         });
-
-         if (response.ok) {
-           const result = await response.json();
-           if (result.success) {
-             console.log('Quiz salvo com sucesso no backend:', result);
-             salvamentoSucesso = true;
-           }
+       if (response.ok) {
+         const result = await response.json();
+         if (result.success) {
+           console.log('Quiz salvo com sucesso no backend:', result);
+           
+           questionsStep.style.display = 'none';
+           successMessage.style.display = 'block';
+           
+           setTimeout(() => {
+             voltarParaDashboard();
+           }, 2000);
+         } else {
+           throw new Error(result.message || 'Falha ao salvar quiz');
          }
-       } catch (error) {
-         console.error('Erro de conexão com backend:', error);
-       }
-
-       // Fallback: salvar localmente se backend falhou
-       if (!salvamentoSucesso) {
-         console.log('Backend indisponível, salvando localmente...');
-         
-         const quizId = 'quiz_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-         const quizCompleto = {
-           id: quizId,
-           ...quizParaSalvar,
-           status: 'ativo',
-           criadoPor: usuarioLogado ? usuarioLogado.usuario : 'usuario',
-           criadoEm: new Date().toISOString(),
-           editadoEm: new Date().toISOString()
-         };
-         
-         const quizzesExistentes = JSON.parse(localStorage.getItem('quizzes') || '[]');
-         quizzesExistentes.push(quizCompleto);
-         localStorage.setItem('quizzes', JSON.stringify(quizzesExistentes));
-         
-         console.log('Quiz salvo localmente com sucesso!');
-         salvamentoSucesso = true;
-         
-         alert(`Quiz salvo com sucesso!\n\nAviso: O quiz foi salvo localmente pois o servidor está indisponível.\nEle será sincronizado automaticamente quando a conexão for restabelecida.`);
-       }
-
-       if (salvamentoSucesso) {
-         questionsStep.style.display = 'none';
-         successMessage.style.display = 'block';
-         
-         setTimeout(() => {
-           voltarParaDashboard();
-         }, 2000);
+       } else {
+         const errorData = await response.json();
+         throw new Error(errorData.message || `Erro HTTP ${response.status}`);
        }
 
      } catch (error) {
-       console.error('Erro geral ao salvar quiz:', error);
-       alert('Erro inesperado ao salvar quiz. Tente novamente.');
+       console.error('Erro ao salvar quiz:', error);
+       alert(`Erro ao salvar quiz: ${error.message}`);
      } finally {
        saveQuizBtn.classList.remove('loading');
        saveQuizBtn.textContent = 'Salvar Quiz';
@@ -974,30 +951,15 @@
      try {
        console.log('Carregando quiz para edição, ID:', id);
        
-       // Tentar carregar do backend primeiro
-       try {
-         const response = await authManager.makeAuthenticatedRequest(`https://brainquiz-wel0.onrender.com/api/quizzes/${id}`);
-         
-         if (response.ok) {
-           const data = await response.json();
-           if (data.success && data.quiz) {
-             console.log('Quiz carregado do backend:', data.quiz);
-             preencherFormularioComQuiz(data.quiz, id);
-             return;
-           }
+       const response = await authManager.makeAuthenticatedRequest(`https://brainquiz-wel0.onrender.com/api/quiz/${id}`);
+       
+       if (response.ok) {
+         const data = await response.json();
+         if (data.success && data.quiz) {
+           console.log('Quiz carregado do backend:', data.quiz);
+           preencherFormularioComQuiz(data.quiz, id);
+           return;
          }
-       } catch (backendError) {
-         console.log('Backend indisponível, tentando carregar localmente...');
-       }
-       
-       // Fallback: carregar do localStorage
-       const quizzesLocais = JSON.parse(localStorage.getItem('quizzes') || '[]');
-       const quizLocal = quizzesLocais.find(q => q.id === id);
-       
-       if (quizLocal) {
-         console.log('Quiz carregado do localStorage:', quizLocal);
-         preencherFormularioComQuiz(quizLocal, id);
-         return;
        }
        
        alert('Quiz não encontrado!');
@@ -1011,10 +973,16 @@
    }
 
    function preencherFormularioComQuiz(quiz, id) {
+     // PADRONIZAR campos vindos do backend
      quizData = {
        titulo: quiz.titulo || quiz.nome || '',
        imagem: quiz.imagem || quiz.imagemBase64 || null,
-       perguntas: quiz.perguntas || []
+       perguntas: (quiz.perguntas || []).map(p => ({
+         texto: p.texto || p.pergunta || '',          // PADRONIZAR: texto
+         imagem: p.imagem || null,
+         alternativas: p.alternativas || [],
+         resposta_correta: p.resposta_correta || p.resposta_certa || 0  // PADRONIZAR
+       }))
      };
      
      editingQuizId = id;
@@ -1035,7 +1003,7 @@
          texto: '',
          imagem: null,
          alternativas: ['', '', ''],
-         resposta_certa: 0
+         resposta_correta: 0
        }];
      }
 
@@ -1072,12 +1040,12 @@
        // Verificar autenticação
        const usuario = await verificarAutenticacao();
        if (!usuario) {
-         console.log('Usuário não autenticado');
+         console.log('Usuario não autenticado');
          mostrarErroAutenticacao();
          return;
        }
        
-       console.log('Usuário autenticado:', usuario.usuario);
+       console.log('Usuario autenticado:', usuario.usuario);
        usuarioLogado = usuario;
        
        // Verificar se está editando um quiz
