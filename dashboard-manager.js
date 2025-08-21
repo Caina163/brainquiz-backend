@@ -51,14 +51,14 @@ class DashboardManager {
     try {
       this.mostrarCarregamento('Carregando dados...');
 
-      // Carregar todos os dados em paralelo com fallbacks locais
+      // Carregar todos os dados do backend - SEM localStorage
       const promessas = [
-        this.carregarComFallback('/api/quizzes', 'quizzes', './data/quizzes.json'),
-        this.carregarComFallback('/api/pdfs', 'pdfs', './data/pdfs.json'),
-        this.carregarComFallback('/api/quizzes/arquivados', 'arquivados', './data/quizzes_arquivados.json'),
-        this.carregarComFallback('/api/quizzes/excluidos', 'excluidos', './data/quizzes_excluidos.json'),
-        this.carregarComFallback('/api/usuarios', 'usuarios', './data/usuarios.json'),
-        this.carregarComFallback('/api/cadastros-pendentes', 'cadastros', './data/cadastros.json')
+        this.carregarDados('/api/quizzes', 'quizzes'),
+        this.carregarDados('/api/pdfs', 'pdfs'),
+        this.carregarDados('/api/quizzes/arquivados', 'arquivados'),
+        this.carregarDados('/api/quizzes/excluidos', 'excluidos'),
+        this.carregarDados('/api/usuarios', 'usuarios'),
+        this.carregarDados('/api/cadastros-pendentes', 'cadastros')
       ];
 
       const resultados = await Promise.allSettled(promessas);
@@ -83,40 +83,25 @@ class DashboardManager {
     }
   }
 
-  async carregarComFallback(endpoint, tipo, fallbackLocal) {
+  async carregarDados(endpoint, tipo) {
     try {
-      // Tentar carregar do backend primeiro
       const response = await authManager.makeAuthenticatedRequest(`${this.baseURL}${endpoint}`);
       
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Tentar diferentes estruturas de resposta
-        if (data[tipo]) return data[tipo];
-        if (data.data) return data.data;
-        if (Array.isArray(data)) return data;
-        if (data.success && data.dados) return data.dados;
-        
-        throw new Error('Estrutura de dados não reconhecida');
-      } else {
+      if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
+      
+      const data = await response.json();
+      
+      // Padronizar estruturas de resposta
+      if (data[tipo]) return data[tipo];
+      if (data.data) return data.data;
+      if (Array.isArray(data)) return data;
+      if (data.success && data.dados) return data.dados;
+      
+      return [];
     } catch (error) {
-      console.warn(`Falha no backend para ${tipo}, tentando arquivo local:`, error);
-      
-      try {
-        // Tentar carregar arquivo JSON local como fallback
-        const localResponse = await fetch(fallbackLocal);
-        if (localResponse.ok) {
-          const localData = await localResponse.json();
-          console.log(`✅ Dados ${tipo} carregados do arquivo local`);
-          return Array.isArray(localData) ? localData : [];
-        }
-      } catch (localError) {
-        console.warn(`Falha no arquivo local para ${tipo}:`, localError);
-      }
-      
-      // Se tudo falhar, retornar array vazio
+      console.warn(`Falha ao carregar ${tipo}:`, error);
       return [];
     }
   }
@@ -152,9 +137,7 @@ class DashboardManager {
     container.innerHTML = `
       <div class="section-header">
         <h3>📝 Quizzes Ativos (${this.dados.quizzes.length})</h3>
-        <button class="btn btn-success" onclick="window.location.href='https://brainquiz-wel0.onrender.com/painel.html'">
-          + Novo Quiz
-        </button>
+        
       </div>
       <div class="quiz-grid">
         ${this.dados.quizzes.map(quiz => this.criarCardQuizAtivo(quiz)).join('')}
@@ -163,6 +146,7 @@ class DashboardManager {
   }
 
   criarCardQuizAtivo(quiz) {
+    // Padronizar campos: 'titulo' para título, 'texto' para pergunta, 'resposta_correta' para resposta
     const titulo = quiz.titulo || quiz.nome || 'Quiz sem título';
     const perguntas = quiz.perguntas ? quiz.perguntas.length : 0;
     const dataModificacao = quiz.modificadoEm || quiz.criadoEm || new Date().toISOString();
@@ -544,7 +528,7 @@ class DashboardManager {
     });
   }
 
-  // AÇÕES DO QUIZ
+  // AÇÕES DO QUIZ - URLs padronizadas
   async jogarQuiz(quizId) {
     try {
       const quiz = this.dados.quizzes.find(q => q.id === quizId);
@@ -566,7 +550,7 @@ class DashboardManager {
     const quiz = this.dados.quizzes.find(q => q.id === quizId);
     if (quiz) {
       // Passar ID do quiz na URL para edição
-      window.location.href = `https://brainquiz-wel0.onrender.com/painel.html?edit=${quizId}`;
+      window.location.href = `https://brainquiz-wel0.onrender.com/painel.html?id=${quizId}`;
     }
   }
 
