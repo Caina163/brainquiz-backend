@@ -11,9 +11,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'brainquiz-super-secret-key-2025';
 
-// Configuração de CORS para produção
+// Configuração de CORS para produção - CORRIGIDO PARA RENDER
 app.use(cors({
-  origin: ['https://brainquiiz.netlify.app', 'http://localhost:3000'],
+  origin: ['https://brainquiz-wel0.onrender.com'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
@@ -203,6 +203,92 @@ app.get('/usuario', autenticarToken, (req, res) => {
   }
 });
 
+// ROTA DE CADASTRO CORRIGIDA
+app.post('/cadastro', async (req, res) => {
+  try {
+    const { usuario, senha, nome, sobrenome, email, telefone, fotoBase64 } = req.body;
+
+    // Validações
+    if (!usuario || !senha || !nome || !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Campos obrigatórios: usuário, senha, nome e email'
+      });
+    }
+
+    // Verificar se usuário já existe
+    const usuarios = lerArquivoJSON('usuarios.json', []);
+    const usuarioExistente = usuarios.find(u => u.usuario === usuario || u.email === email);
+
+    if (usuarioExistente) {
+      return res.status(409).json({
+        success: false,
+        message: 'Usuário ou email já cadastrado'
+      });
+    }
+
+    // Hash da senha
+    const senhaHash = await bcrypt.hash(senha, 10);
+
+    // Criar novo usuário
+    const novoUsuario = {
+      id: gerarId(),
+      usuario,
+      senha: senhaHash,
+      nome,
+      sobrenome: sobrenome || '',
+      email,
+      telefone: telefone || '',
+      fotoBase64: fotoBase64 || null,
+      tipo: 'aluno', // Padrão
+      ativo: true,
+      criadoEm: new Date().toISOString(),
+      ultimoLogin: null
+    };
+
+    usuarios.push(novoUsuario);
+    salvarArquivoJSON('usuarios.json', usuarios);
+
+    // Remover senha da resposta
+    const { senha: _, ...usuarioResposta } = novoUsuario;
+
+    res.status(201).json({
+      success: true,
+      message: 'Usuário cadastrado com sucesso',
+      usuario: usuarioResposta
+    });
+
+  } catch (error) {
+    console.error('Erro no cadastro:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// ROTA PARA CARREGAR USUÁRIOS
+app.get('/api/usuarios', autenticarToken, (req, res) => {
+  try {
+    const usuarios = lerArquivoJSON('usuarios.json', []);
+    // Remover senhas da resposta
+    const usuariosSemSenha = usuarios.map(({ senha, ...usuario }) => usuario);
+    res.json({ success: true, usuarios: usuariosSemSenha });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao carregar usuários' });
+  }
+});
+
+// ROTA PARA CARREGAR CADASTROS PENDENTES
+app.get('/api/cadastros-pendentes', autenticarToken, (req, res) => {
+  try {
+    const cadastros = lerArquivoJSON('cadastros_pendentes.json', []);
+    res.json({ success: true, cadastros });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao carregar cadastros pendentes' });
+  }
+});
+
 // ROTA PARA CARREGAR PDFS
 app.get('/api/pdfs', autenticarToken, (req, res) => {
   try {
@@ -214,8 +300,8 @@ app.get('/api/pdfs', autenticarToken, (req, res) => {
   }
 });
 
-// ROTA PARA UPLOAD DE PDF
-app.post('/upload-pdf', autenticarToken, upload.single('pdf'), (req, res) => {
+// ROTA PARA UPLOAD DE PDF - CORRIGIDA
+app.post('/api/upload-pdf', autenticarToken, upload.single('pdf'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Arquivo não encontrado' });
@@ -229,154 +315,4 @@ app.post('/upload-pdf', autenticarToken, upload.single('pdf'), (req, res) => {
       bloqueado: false,
       uploadedBy: req.user.usuario,
       uploadedAt: new Date().toISOString(),
-      dataUpload: new Date().toISOString()
-    };
-
-    const pdfs = lerArquivoJSON('pdfs.json', []);
-    pdfs.push(pdfData);
-    salvarArquivoJSON('pdfs.json', pdfs);
-
-    res.json({ success: true, pdf: pdfData });
-  } catch (error) {
-    console.error('Erro no upload:', error);
-    res.status(500).json({ success: false, message: 'Erro no upload' });
-  }
-});
-
-// ROTAS PARA QUIZZES
-app.get('/api/quizzes', autenticarToken, (req, res) => {
-  try {
-    const quizzes = lerArquivoJSON('quizzes.json', []);
-    res.json({ success: true, quizzes });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Erro ao carregar quizzes' });
-  }
-});
-
-app.get('/api/quizzes/arquivados', autenticarToken, (req, res) => {
-  try {
-    const arquivados = lerArquivoJSON('quizzes_arquivados.json', []);
-    res.json({ success: true, quizzes: arquivados });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Erro ao carregar quizzes arquivados' });
-  }
-});
-
-app.get('/api/quizzes/excluidos', autenticarToken, (req, res) => {
-  try {
-    const excluidos = lerArquivoJSON('quizzes_excluidos.json', []);
-    res.json({ success: true, quizzes: excluidos });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Erro ao carregar quizzes excluídos' });
-  }
-});
-
-// SISTEMA DE QUIZ TEMPORÁRIO
-let quizTemporario = null;
-
-app.post('/api/quiz-temp', autenticarToken, (req, res) => {
-  try {
-    const quizData = req.body;
-    quizTemporario = {
-      ...quizData,
-      id: gerarId(),
-      createdAt: Date.now(),
-      createdBy: req.user.usuario
-    };
-    
-    res.json({ success: true, quizId: quizTemporario.id });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Erro ao salvar quiz temporário' });
-  }
-});
-
-app.get('/api/quiz-temp', autenticarToken, (req, res) => {
-  try {
-    if (quizTemporario && Date.now() - quizTemporario.createdAt < 3600000) { // 1 hora
-      res.json({ success: true, quiz: quizTemporario });
-    } else {
-      res.status(404).json({ success: false, message: 'Quiz temporário não encontrado' });
-    }
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Erro ao carregar quiz temporário' });
-  }
-});
-
-// ROTA PARA SALVAR QUIZZES
-app.post('/api/quizzes', autenticarToken, (req, res) => {
-  try {
-    const quizData = {
-      ...req.body,
-      id: gerarId(),
-      criadoPor: req.user.usuario,
-      criadoEm: new Date().toISOString()
-    };
-
-    const quizzes = lerArquivoJSON('quizzes.json', []);
-    quizzes.push(quizData);
-    salvarArquivoJSON('quizzes.json', quizzes);
-
-    res.json({ success: true, quiz: quizData });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Erro ao salvar quiz' });
-  }
-});
-
-// ROTA DE LOG DE ERROS
-app.post('/api/error-log', (req, res) => {
-  try {
-    const errorLog = {
-      ...req.body,
-      timestamp: new Date().toISOString(),
-      ip: req.ip
-    };
-    
-    console.error('🚨 Error logged:', errorLog);
-    
-    // Em produção, salvar em arquivo ou enviar para serviço de monitoramento
-    const logs = lerArquivoJSON('error_logs.json', []);
-    logs.push(errorLog);
-    
-    // Manter apenas os últimos 1000 logs
-    if (logs.length > 1000) {
-      logs.splice(0, logs.length - 1000);
-    }
-    
-    salvarArquivoJSON('error_logs.json', logs);
-    
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Erro ao salvar log:', error);
-    res.status(500).json({ success: false });
-  }
-});
-
-// Middleware de tratamento de erros global
-app.use((error, req, res, next) => {
-  console.error('🚨 Erro não tratado:', error);
-  res.status(500).json({
-    success: false,
-    message: 'Erro interno do servidor'
-  });
-});
-
-// Rota 404
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Endpoint não encontrado'
-  });
-});
-
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`🔒 JWT Secret configurado: ${JWT_SECRET.substring(0, 10)}...`);
-  
-  // Verificar arquivos essenciais na inicialização
-  const arquivos = ['usuarios.json', 'pdfs.json', 'quizzes.json'];
-  arquivos.forEach(arquivo => {
-    if (!fs.existsSync(path.join(__dirname, arquivo))) {
-      console.warn(`⚠️  Arquivo ${arquivo} não encontrado, será criado quando necessário`);
-    }
-  });
-});
+      dataUpload: new Date().toISO
