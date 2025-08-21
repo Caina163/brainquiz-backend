@@ -51,7 +51,6 @@ class DashboardManager {
     try {
       this.mostrarCarregamento('Carregando dados...');
 
-      // Carregar todos os dados do backend - SEM localStorage
       const promessas = [
         this.carregarDados('/api/quizzes', 'quizzes'),
         this.carregarDados('/api/pdfs', 'pdfs'),
@@ -77,7 +76,7 @@ class DashboardManager {
       
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
-      this.mostrarErro('Erro ao carregar alguns dados. Algumas funcionalidades podem estar limitadas.');
+      this.mostrarErro('Erro ao carregar alguns dados.');
     } finally {
       this.esconderCarregamento();
     }
@@ -93,7 +92,6 @@ class DashboardManager {
       
       const data = await response.json();
       
-      // Padronizar estruturas de resposta
       if (data[tipo]) return data[tipo];
       if (data.data) return data.data;
       if (Array.isArray(data)) return data;
@@ -116,107 +114,8 @@ class DashboardManager {
     this.atualizarEstatisticas();
   }
 
-  renderizarQuizzes() {
-    const container = document.getElementById('quizzes-container');
-    if (!container) return;
-
-    if (this.dados.quizzes.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">📝</div>
-          <h3>Nenhum quiz criado ainda</h3>
-          <p>Comece criando seu primeiro quiz!</p>
-          <button class="btn btn-primary" onclick="window.location.href='https://brainquiz-wel0.onrender.com/painel.html'">
-            Criar Primeiro Quiz
-          </button>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = `
-      <div class="section-header">
-        <h3>📝 Quizzes Ativos (${this.dados.quizzes.length})</h3>
-        
-      </div>
-      <div class="quiz-grid">
-        ${this.dados.quizzes.map(quiz => this.criarCardQuizAtivo(quiz)).join('')}
-      </div>
-    `;
-  }
-
-  criarCardQuizAtivo(quiz) {
-    // Padronizar campos: 'titulo' para título, 'texto' para pergunta, 'resposta_correta' para resposta
-    const titulo = quiz.titulo || quiz.nome || 'Quiz sem título';
-    const perguntas = quiz.perguntas ? quiz.perguntas.length : 0;
-    const dataModificacao = quiz.modificadoEm || quiz.criadoEm || new Date().toISOString();
-
-    return `
-      <div class="quiz-card-ativo" data-quiz-id="${quiz.id}" onclick="dashboardManager.jogarQuiz('${quiz.id}')">
-        <div class="quiz-thumbnail">
-          <div class="quiz-play-icon">▶️</div>
-          <div class="quiz-background"></div>
-        </div>
-        <div class="quiz-info">
-          <h4 class="quiz-title">${titulo}</h4>
-          <div class="quiz-meta">
-            <span class="quiz-questions">📊 ${perguntas} pergunta(s)</span>
-            <span class="quiz-date">📅 ${this.formatarDataSimples(dataModificacao)}</span>
-          </div>
-        </div>
-        <div class="quiz-actions" onclick="event.stopPropagation()">
-          <button class="quiz-action-btn" onclick="dashboardManager.mostrarMenuQuiz(event, '${quiz.id}')" title="Mais opções">
-            ⚙️
-          </button>
-        </div>
-      </div>
-    `;
-  }
-
-  mostrarMenuQuiz(event, quizId) {
-    event.stopPropagation();
-    
-    // Remove menu existente se houver
-    const menuExistente = document.querySelector('.quiz-menu-dropdown');
-    if (menuExistente) {
-      menuExistente.remove();
-    }
-
-    const menu = document.createElement('div');
-    menu.className = 'quiz-menu-dropdown';
-    menu.innerHTML = `
-      <div class="menu-item" onclick="dashboardManager.jogarQuiz('${quizId}')">
-        ▶️ Jogar Quiz
-      </div>
-      <div class="menu-item" onclick="dashboardManager.editarQuiz('${quizId}')">
-        ✏️ Editar
-      </div>
-      <div class="menu-item" onclick="dashboardManager.arquivarQuiz('${quizId}')">
-        📦 Arquivar
-      </div>
-      <div class="menu-item danger" onclick="dashboardManager.excluirQuiz('${quizId}')">
-        🗑️ Excluir
-      </div>
-    `;
-
-    // Posicionar menu
-    const rect = event.target.getBoundingClientRect();
-    menu.style.position = 'fixed';
-    menu.style.top = `${rect.bottom + 5}px`;
-    menu.style.left = `${rect.left - 120}px`;
-    menu.style.zIndex = '1000';
-
-    document.body.appendChild(menu);
-
-    // Fechar menu ao clicar fora
-    setTimeout(() => {
-      document.addEventListener('click', function fecharMenu() {
-        menu.remove();
-        document.removeEventListener('click', fecharMenu);
-      });
-    }, 10);
-  }
-
+  // FUNÇÕES DE RENDERIZAÇÃO MANTIDAS COMO ESTAVAM...
+  
   renderizarUsuarios() {
     const container = document.getElementById('usuarios-container');
     if (!container) return;
@@ -244,9 +143,9 @@ class DashboardManager {
   criarCardUsuarioGerencial(usuario) {
     const nomeCompleto = `${usuario.nome} ${usuario.sobrenome || ''}`.trim();
     const tipoIcon = usuario.tipo === 'administrador' ? 'A' : 
-                    usuario.tipo === 'moderador' ? 'M' : 'A';
-    const tipoLabel = usuario.tipo === 'administrador' ? 'Admin Sistema' : 
-                     usuario.tipo === 'moderador' ? 'Moderador Teste' : 'Aluno Exemplo';
+                    usuario.tipo === 'moderador' ? 'M' : 'U';
+    const tipoLabel = usuario.tipo === 'administrador' ? 'Administrador' : 
+                     usuario.tipo === 'moderador' ? 'Moderador' : 'Usuário';
     const status = usuario.ativo !== false ? '🟢' : '🔴';
     
     return `
@@ -276,6 +175,379 @@ class DashboardManager {
         </div>
       </div>
     `;
+  }
+
+  // CORREÇÃO 1: EDIÇÃO DE USUÁRIOS COM CONFIRMAÇÃO DE SENHA
+  async editarUsuario(usuarioId) {
+    const usuario = this.dados.usuarios.find(u => u.id === usuarioId);
+    if (!usuario) {
+      this.mostrarErro('Usuário não encontrado');
+      return;
+    }
+
+    this.mostrarModalEdicaoUsuario(usuario);
+  }
+
+  mostrarModalEdicaoUsuario(usuario) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-backdrop';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Editar Usuário</h3>
+          <button onclick="this.closest('.modal-backdrop').remove()" class="btn-close">×</button>
+        </div>
+        <div class="modal-body">
+          <form id="form-editar-usuario">
+            <div class="form-group">
+              <label>Nome:</label>
+              <input type="text" id="edit-nome" value="${usuario.nome}" required>
+            </div>
+            <div class="form-group">
+              <label>Sobrenome:</label>
+              <input type="text" id="edit-sobrenome" value="${usuario.sobrenome || ''}">
+            </div>
+            <div class="form-group">
+              <label>Email:</label>
+              <input type="email" id="edit-email" value="${usuario.email || ''}" required>
+            </div>
+            <div class="form-group">
+              <label>Usuário:</label>
+              <input type="text" id="edit-usuario" value="${usuario.usuario}" required>
+            </div>
+            <div class="form-group">
+              <label>Tipo:</label>
+              <select id="edit-tipo">
+                <option value="usuario" ${usuario.tipo === 'usuario' ? 'selected' : ''}>Usuário</option>
+                <option value="moderador" ${usuario.tipo === 'moderador' ? 'selected' : ''}>Moderador</option>
+                <option value="administrador" ${usuario.tipo === 'administrador' ? 'selected' : ''}>Administrador</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Nova Senha (deixe vazio para manter):</label>
+              <input type="password" id="edit-nova-senha" placeholder="Digite uma nova senha ou deixe vazio">
+            </div>
+            <div class="form-group">
+              <label>Confirme sua senha para salvar:</label>
+              <input type="password" id="edit-confirmar-senha" placeholder="Digite sua senha atual" required>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button onclick="this.closest('.modal-backdrop').remove()" class="btn btn-secondary">Cancelar</button>
+          <button onclick="dashboardManager.salvarEdicaoUsuario('${usuario.id}')" class="btn btn-primary">Salvar</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+  }
+
+  async salvarEdicaoUsuario(usuarioId) {
+    try {
+      const dados = {
+        nome: document.getElementById('edit-nome').value,
+        sobrenome: document.getElementById('edit-sobrenome').value,
+        email: document.getElementById('edit-email').value,
+        usuario: document.getElementById('edit-usuario').value,
+        tipo: document.getElementById('edit-tipo').value,
+        novaSenha: document.getElementById('edit-nova-senha').value,
+        senhaConfirmacao: document.getElementById('edit-confirmar-senha').value
+      };
+
+      if (!dados.senhaConfirmacao) {
+        this.mostrarErro('Digite sua senha para confirmar as alterações');
+        return;
+      }
+
+      this.mostrarCarregamento('Salvando alterações...');
+
+      const response = await authManager.makeAuthenticatedRequest(`${this.baseURL}/api/usuario/${usuarioId}`, {
+        method: 'PUT',
+        body: JSON.stringify(dados)
+      });
+
+      if (response.ok) {
+        document.querySelector('.modal-backdrop').remove();
+        await this.carregarTodosDados();
+        this.mostrarSucesso('Usuário atualizado com sucesso');
+      } else {
+        const data = await response.json();
+        throw new Error(data.message || 'Falha ao atualizar usuário');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar usuário:', error);
+      this.mostrarErro(`Erro ao salvar: ${error.message}`);
+    } finally {
+      this.esconderCarregamento();
+    }
+  }
+
+  // CORREÇÃO 2: UPLOAD DE PDF SEM REDIRECIONAMENTO
+  async uploadPDF(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      this.mostrarErro('Apenas arquivos PDF são permitidos');
+      input.value = '';
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      this.mostrarErro('Arquivo muito grande. Máximo 10MB permitido');
+      input.value = '';
+      return;
+    }
+
+    try {
+      this.mostrarCarregamento('Enviando PDF...');
+
+      const formData = new FormData();
+      formData.append('pdf', file);
+
+      // CORREÇÃO: Usar fetch diretamente com headers de autenticação corretos
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      
+      const response = await fetch(`${this.baseURL}/api/upload-pdf`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (response.ok) {
+        await this.carregarTodosDados();
+        this.mostrarSucesso('PDF enviado com sucesso');
+        input.value = '';
+      } else {
+        const data = await response.json();
+        throw new Error(data.message || 'Falha no upload');
+      }
+    } catch (error) {
+      console.error('Erro no upload:', error);
+      this.mostrarErro(`Erro ao enviar PDF: ${error.message}`);
+      input.value = '';
+    } finally {
+      this.esconderCarregamento();
+    }
+  }
+
+  // CORREÇÃO 3: APROVAR/REJEITAR CADASTROS
+  async aprovarCadastro(cadastroId) {
+    if (!confirm('Tem certeza que deseja aprovar este cadastro?')) return;
+
+    try {
+      this.mostrarCarregamento('Aprovando cadastro...');
+
+      const response = await authManager.makeAuthenticatedRequest(`${this.baseURL}/api/cadastro/${cadastroId}/aprovar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        await this.carregarTodosDados();
+        this.mostrarSucesso('Cadastro aprovado com sucesso');
+      } else {
+        const data = await response.json();
+        throw new Error(data.message || 'Falha ao aprovar');
+      }
+    } catch (error) {
+      console.error('Erro ao aprovar cadastro:', error);
+      this.mostrarErro(`Erro ao aprovar cadastro: ${error.message}`);
+    } finally {
+      this.esconderCarregamento();
+    }
+  }
+
+  async rejeitarCadastro(cadastroId) {
+    if (!confirm('Tem certeza que deseja rejeitar este cadastro?')) return;
+
+    try {
+      this.mostrarCarregamento('Rejeitando cadastro...');
+
+      const response = await authManager.makeAuthenticatedRequest(`${this.baseURL}/api/cadastro/${cadastroId}/rejeitar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        await this.carregarTodosDados();
+        this.mostrarSucesso('Cadastro rejeitado com sucesso');
+      } else {
+        const data = await response.json();
+        throw new Error(data.message || 'Falha ao rejeitar');
+      }
+    } catch (error) {
+      console.error('Erro ao rejeitar cadastro:', error);
+      this.mostrarErro(`Erro ao rejeitar cadastro: ${error.message}`);
+    } finally {
+      this.esconderCarregamento();
+    }
+  }
+
+  // CORREÇÃO 4: FUNÇÕES DA ENGRENAGEM DOS USUÁRIOS
+  async alternarStatusUsuario(usuarioId) {
+    try {
+      const usuario = this.dados.usuarios.find(u => u.id === usuarioId);
+      if (!usuario) {
+        this.mostrarErro('Usuário não encontrado');
+        return;
+      }
+
+      const novoStatus = !usuario.ativo;
+      const acao = novoStatus ? 'ativar' : 'desativar';
+      
+      if (!confirm(`Tem certeza que deseja ${acao} este usuário?`)) return;
+
+      this.mostrarCarregamento(`${acao.charAt(0).toUpperCase() + acao.slice(1)}ando usuário...`);
+
+      const response = await authManager.makeAuthenticatedRequest(`${this.baseURL}/api/usuario/${usuarioId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ativo: novoStatus })
+      });
+
+      if (response.ok) {
+        await this.carregarTodosDados();
+        this.mostrarSucesso(`Usuário ${acao}do com sucesso`);
+      } else {
+        const data = await response.json();
+        throw new Error(data.message || `Falha ao ${acao}`);
+      }
+    } catch (error) {
+      console.error('Erro ao alterar status do usuário:', error);
+      this.mostrarErro(`Erro ao alterar status: ${error.message}`);
+    } finally {
+      this.esconderCarregamento();
+    }
+  }
+
+  async excluirUsuario(usuarioId) {
+    if (!confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.')) return;
+
+    try {
+      this.mostrarCarregamento('Excluindo usuário...');
+
+      const response = await authManager.makeAuthenticatedRequest(`${this.baseURL}/api/usuario/${usuarioId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        await this.carregarTodosDados();
+        this.mostrarSucesso('Usuário excluído com sucesso');
+      } else {
+        const data = await response.json();
+        throw new Error(data.message || 'Falha ao excluir');
+      }
+    } catch (error) {
+      console.error('Erro ao excluir usuário:', error);
+      this.mostrarErro(`Erro ao excluir usuário: ${error.message}`);
+    } finally {
+      this.esconderCarregamento();
+    }
+  }
+
+  // TODAS AS OUTRAS FUNÇÕES MANTIDAS...
+  
+  renderizarQuizzes() {
+    const container = document.getElementById('quizzes-container');
+    if (!container) return;
+
+    if (this.dados.quizzes.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📝</div>
+          <h3>Nenhum quiz criado ainda</h3>
+          <p>Comece criando seu primeiro quiz!</p>
+          <button class="btn btn-primary" onclick="window.location.href='https://brainquiz-wel0.onrender.com/painel.html'">
+            Criar Primeiro Quiz
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="section-header">
+        <h3>📝 Quizzes Ativos (${this.dados.quizzes.length})</h3>
+      </div>
+      <div class="quiz-grid">
+        ${this.dados.quizzes.map(quiz => this.criarCardQuizAtivo(quiz)).join('')}
+      </div>
+    `;
+  }
+
+  criarCardQuizAtivo(quiz) {
+    const titulo = quiz.titulo || quiz.nome || 'Quiz sem título';
+    const perguntas = quiz.perguntas ? quiz.perguntas.length : 0;
+    const dataModificacao = quiz.modificadoEm || quiz.criadoEm || new Date().toISOString();
+
+    return `
+      <div class="quiz-card-ativo" data-quiz-id="${quiz.id}" onclick="dashboardManager.jogarQuiz('${quiz.id}')">
+        <div class="quiz-thumbnail">
+          <div class="quiz-play-icon">▶️</div>
+          <div class="quiz-background"></div>
+        </div>
+        <div class="quiz-info">
+          <h4 class="quiz-title">${titulo}</h4>
+          <div class="quiz-meta">
+            <span class="quiz-questions">📊 ${perguntas} pergunta(s)</span>
+            <span class="quiz-date">📅 ${this.formatarDataSimples(dataModificacao)}</span>
+          </div>
+        </div>
+        <div class="quiz-actions" onclick="event.stopPropagation()">
+          <button class="quiz-action-btn" onclick="dashboardManager.mostrarMenuQuiz(event, '${quiz.id}')" title="Mais opções">
+            ⚙️
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  mostrarMenuQuiz(event, quizId) {
+    event.stopPropagation();
+    
+    const menuExistente = document.querySelector('.quiz-menu-dropdown');
+    if (menuExistente) {
+      menuExistente.remove();
+    }
+
+    const menu = document.createElement('div');
+    menu.className = 'quiz-menu-dropdown';
+    menu.innerHTML = `
+      <div class="menu-item" onclick="dashboardManager.jogarQuiz('${quizId}')">
+        ▶️ Jogar Quiz
+      </div>
+      <div class="menu-item" onclick="dashboardManager.editarQuiz('${quizId}')">
+        ✏️ Editar
+      </div>
+      <div class="menu-item" onclick="dashboardManager.arquivarQuiz('${quizId}')">
+        📦 Arquivar
+      </div>
+      <div class="menu-item danger" onclick="dashboardManager.excluirQuiz('${quizId}')">
+        🗑️ Excluir
+      </div>
+    `;
+
+    const rect = event.target.getBoundingClientRect();
+    menu.style.position = 'fixed';
+    menu.style.top = `${rect.bottom + 5}px`;
+    menu.style.left = `${rect.left - 120}px`;
+    menu.style.zIndex = '1000';
+
+    document.body.appendChild(menu);
+
+    setTimeout(() => {
+      document.addEventListener('click', function fecharMenu() {
+        menu.remove();
+        document.removeEventListener('click', fecharMenu);
+      });
+    }, 10);
   }
 
   renderizarCadastros() {
@@ -310,9 +582,7 @@ class DashboardManager {
     return `
       <div class="cadastro-card-pendente" data-cadastro-id="${cadastro.id}">
         <div class="cadastro-header">
-          <div class="cadastro-avatar">
-            👤
-          </div>
+          <div class="cadastro-avatar">👤</div>
           <div class="cadastro-info">
             <h4 class="cadastro-nome">${nomeCompleto}</h4>
             <p class="cadastro-usuario">@${cadastro.usuario}</p>
@@ -519,7 +789,6 @@ class DashboardManager {
       totalCadastros: this.dados.cadastros.length
     };
 
-    // Atualizar elementos de estatística se existirem
     Object.entries(stats).forEach(([key, value]) => {
       const elemento = document.getElementById(key);
       if (elemento) {
@@ -528,7 +797,7 @@ class DashboardManager {
     });
   }
 
-  // AÇÕES DO QUIZ - URLs padronizadas
+  // AÇÕES DO QUIZ
   async jogarQuiz(quizId) {
     try {
       const quiz = this.dados.quizzes.find(q => q.id === quizId);
@@ -537,7 +806,6 @@ class DashboardManager {
         return;
       }
 
-      // Redirecionar para o player com ID do quiz
       window.location.href = `https://brainquiz-wel0.onrender.com/quiz.html?id=${quizId}`;
       
     } catch (error) {
@@ -549,7 +817,6 @@ class DashboardManager {
   editarQuiz(quizId) {
     const quiz = this.dados.quizzes.find(q => q.id === quizId);
     if (quiz) {
-      // Passar ID do quiz na URL para edição
       window.location.href = `https://brainquiz-wel0.onrender.com/painel.html?id=${quizId}`;
     }
   }
@@ -602,7 +869,6 @@ class DashboardManager {
       return;
     }
 
-    // Abrir PDF em nova aba
     const newWindow = window.open();
     newWindow.document.write(`
       <html>
@@ -695,145 +961,6 @@ class DashboardManager {
     }
   }
 
-  async uploadPDF(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    if (file.type !== 'application/pdf') {
-      this.mostrarErro('Apenas arquivos PDF são permitidos');
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) { // 10MB
-      this.mostrarErro('Arquivo muito grande. Máximo 10MB permitido');
-      return;
-    }
-
-    try {
-      this.mostrarCarregamento('Enviando PDF...');
-
-      const formData = new FormData();
-      formData.append('pdf', file);
-
-      const response = await authManager.makeAuthenticatedRequest(`${this.baseURL}/api/upload-pdf`, {
-        method: 'POST',
-        body: formData,
-        headers: {} // Remover Content-Type para FormData
-      });
-
-      if (response.ok) {
-        await this.carregarTodosDados();
-        this.mostrarSucesso('PDF enviado com sucesso');
-        input.value = ''; // Limpar input
-      } else {
-        const data = await response.json();
-        throw new Error(data.message || 'Falha no upload');
-      }
-    } catch (error) {
-      console.error('Erro no upload:', error);
-      this.mostrarErro(`Erro ao enviar PDF: ${error.message}`);
-    } finally {
-      this.esconderCarregamento();
-    }
-  }
-
-  // AÇÕES DE USUÁRIOS
-  async editarUsuario(usuarioId) {
-    // Implementar modal de edição de usuário
-    this.mostrarInfo('Funcionalidade de edição de usuário em desenvolvimento');
-  }
-
-  async alternarStatusUsuario(usuarioId) {
-    try {
-      const usuario = this.dados.usuarios.find(u => u.id === usuarioId);
-      if (!usuario) {
-        this.mostrarErro('Usuário não encontrado');
-        return;
-      }
-
-      const novoStatus = !usuario.ativo;
-      const acao = novoStatus ? 'ativar' : 'desativar';
-      
-      if (!confirm(`Tem certeza que deseja ${acao} este usuário?`)) return;
-
-      const response = await authManager.makeAuthenticatedRequest(`${this.baseURL}/api/usuario/${usuarioId}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ ativo: novoStatus })
-      });
-
-      if (response.ok) {
-        await this.carregarTodosDados();
-        this.mostrarSucesso(`Usuário ${acao}do com sucesso`);
-      } else {
-        throw new Error(`Falha ao ${acao}`);
-      }
-    } catch (error) {
-      console.error('Erro ao alterar status do usuário:', error);
-      this.mostrarErro('Erro ao alterar status do usuário');
-    }
-  }
-
-  async excluirUsuario(usuarioId) {
-    if (!confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.')) return;
-
-    try {
-      const response = await authManager.makeAuthenticatedRequest(`${this.baseURL}/api/usuario/${usuarioId}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        await this.carregarTodosDados();
-        this.mostrarSucesso('Usuário excluído com sucesso');
-      } else {
-        throw new Error('Falha ao excluir');
-      }
-    } catch (error) {
-      console.error('Erro ao excluir usuário:', error);
-      this.mostrarErro('Erro ao excluir usuário');
-    }
-  }
-
-  // AÇÕES DE CADASTROS
-  async aprovarCadastro(cadastroId) {
-    if (!confirm('Tem certeza que deseja aprovar este cadastro?')) return;
-
-    try {
-      const response = await authManager.makeAuthenticatedRequest(`${this.baseURL}/api/cadastro/${cadastroId}/aprovar`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        await this.carregarTodosDados();
-        this.mostrarSucesso('Cadastro aprovado com sucesso');
-      } else {
-        throw new Error('Falha ao aprovar');
-      }
-    } catch (error) {
-      console.error('Erro ao aprovar cadastro:', error);
-      this.mostrarErro('Erro ao aprovar cadastro');
-    }
-  }
-
-  async rejeitarCadastro(cadastroId) {
-    if (!confirm('Tem certeza que deseja rejeitar este cadastro?')) return;
-
-    try {
-      const response = await authManager.makeAuthenticatedRequest(`${this.baseURL}/api/cadastro/${cadastroId}/rejeitar`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        await this.carregarTodosDados();
-        this.mostrarSucesso('Cadastro rejeitado com sucesso');
-      } else {
-        throw new Error('Falha ao rejeitar');
-      }
-    } catch (error) {
-      console.error('Erro ao rejeitar cadastro:', error);
-      this.mostrarErro('Erro ao rejeitar cadastro');
-    }
-  }
-
   // AÇÕES DE RESTAURAÇÃO
   async restaurarQuiz(quizId) {
     if (!confirm('Deseja restaurar este quiz?')) return;
@@ -916,7 +1043,6 @@ class DashboardManager {
   }
 
   configurarEventListeners() {
-    // Configurar busca
     const campoBusca = document.getElementById('campo-busca');
     if (campoBusca) {
       campoBusca.addEventListener('input', (e) => {
@@ -924,7 +1050,6 @@ class DashboardManager {
       });
     }
 
-    // Configurar filtros de categoria
     const filtroCategoria = document.getElementById('filtro-categoria');
     if (filtroCategoria) {
       filtroCategoria.addEventListener('change', (e) => {
@@ -932,7 +1057,6 @@ class DashboardManager {
       });
     }
 
-    // Configurar botão de logout
     const btnLogout = document.getElementById('btn-logout');
     if (btnLogout) {
       btnLogout.addEventListener('click', () => {
@@ -942,7 +1066,6 @@ class DashboardManager {
       });
     }
 
-    // Configurar refresh automático a cada 5 minutos
     setInterval(() => {
       this.carregarTodosDados();
     }, 5 * 60 * 1000);
@@ -972,13 +1095,11 @@ class DashboardManager {
       'excluidos': ['excluidos-container']
     };
 
-    // Esconder todas as seções
     Object.values(sections).flat().forEach(id => {
       const elemento = document.getElementById(id);
       if (elemento) elemento.style.display = 'none';
     });
 
-    // Mostrar seções relevantes
     if (sections[categoria]) {
       sections[categoria].forEach(id => {
         const elemento = document.getElementById(id);
@@ -1099,13 +1220,11 @@ class DashboardManager {
 
     document.body.appendChild(notification);
 
-    // Animar entrada
     setTimeout(() => {
       notification.style.opacity = '1';
       notification.style.transform = 'translateX(0)';
     }, 10);
 
-    // Auto-remover após 5 segundos
     setTimeout(() => {
       if (notification.parentElement) {
         notification.style.opacity = '0';
