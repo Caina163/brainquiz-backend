@@ -226,7 +226,212 @@ app.get('/usuario', autenticarToken, (req, res) => {
   }
 });
 
-// Cadastro
+// Cadastro Pendente - NOVO ENDPOINT PARA O SISTEMA DE APROVAÇÃO
+app.post('/api/cadastro-pendente', async (req, res) => {
+  try {
+    const { usuario, senha, nome, sobrenome, email, telefone, fotoBase64 } = req.body;
+
+    if (!usuario || !senha || !nome || !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Campos obrigatórios: usuário, senha, nome e email'
+      });
+    }
+
+    // Verificar se já existe usuário ativo ou pendente com mesmo username/email
+    const usuarios = lerArquivoJSON('usuarios.json', []);
+    const cadastrosPendentes = lerArquivoJSON('cadastros_pendentes.json', []);
+    
+    const usuarioExistente = usuarios.find(u => u.usuario === usuario || u.email === email);
+    const cadastroExistente = cadastrosPendentes.find(c => c.usuario === usuario || c.email === email);
+
+    if (usuarioExistente) {
+      return res.status(409).json({
+        success: false,
+        message: 'Usuário ou email já cadastrado'
+      });
+    }
+
+    if (cadastroExistente) {
+      return res.status(409).json({
+        success: false,
+        message: 'Já existe um cadastro pendente com este usuário ou email'
+      });
+    }
+
+    // Hash da senha
+    const senhaHash = await bcrypt.hash(senha, 10);
+
+    // Criar cadastro pendente
+    const cadastroPendente = {
+      id: gerarId(),
+      usuario,
+      senha: senhaHash, // Já salvar com hash
+      nome,
+      sobrenome: sobrenome || '',
+      email,
+      telefone: telefone || '',
+      fotoBase64: fotoBase64 || null,
+      status: 'pendente',
+      solicitadoEm: new Date().toISOString(),
+      tipo: 'aluno' // Tipo padrão
+    };
+
+    // Salvar na lista de pendentes
+    cadastrosPendentes.push(cadastroPendente);
+    salvarArquivoJSON('cadastros_pendentes.json', cadastrosPendentes);
+
+    console.log(`Novo cadastro pendente salvo: ${usuario} (${email})`);
+
+    // Remover senha da resposta
+    const { senha: _, ...cadastroResposta } = cadastroPendente;
+
+    res.status(201).json({
+      success: true,
+      message: 'Cadastro enviado para aprovação com sucesso',
+      cadastro: cadastroResposta
+    });
+
+  } catch (error) {
+    console.error('Erro ao salvar cadastro pendente:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Aprovar Cadastro - Endpoint para admins aprovarem cadastros
+app.post('/api/aprovar-cadastro/:id', autenticarToken, async (req, res) => {
+  try {
+    // Verificar se usuário é admin
+    if (req.user.tipo !== 'admin' && req.user.tipo !== 'moderador') {
+      return res.status(403).json({
+        success: false,
+        message: 'Apenas administradores podem aprovar cadastros'
+      });
+    }
+
+    const cadastroId = req.params.id;
+    const cadastrosPendentes = lerArquivoJSON('cadastros_pendentes.json', []);
+    const usuarios = lerArquivoJSON('usuarios.json', []);
+
+    // Encontrar cadastro pendente
+    const cadastroIndex = cadastrosPendentes.findIndex(c => c.id === cadastroId);
+    
+    if (cadastroIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cadastro pendente não encontrado'
+      });
+    }
+
+    const cadastro = cadastrosPendentes[cadastroIndex];
+
+    // Verificar se usuário/email já não existe nos usuários ativos
+    const usuarioExistente = usuarios.find(u => u.usuario === cadastro.usuario || u.email === cadastro.email);
+    
+    if (usuarioExistente) {
+      return res.status(409).json({
+        success: false,
+        message: 'Usuário ou email já está cadastrado no sistema'
+      });
+    }
+
+    // Criar usuário ativo
+    const novoUsuario = {
+      id: cadastro.id, // Manter o mesmo ID
+      usuario: cadastro.usuario,
+      senha: cadastro.senha, // Senha já está hasheada
+      nome: cadastro.nome,
+      sobrenome: cadastro.sobrenome,
+      email: cadastro.email,
+      telefone: cadastro.telefone,
+      fotoBase64: cadastro.fotoBase64,
+      tipo: cadastro.tipo,
+      ativo: true,
+      criadoEm: cadastro.solicitadoEm,
+      aprovadoEm: new Date().toISOString(),
+      aprovadoPor: req.user.usuario,
+      ultimoLogin: null
+    };
+
+    // Adicionar aos usuários
+    usuarios.push(novoUsuario);
+    salvarArquivoJSON('usuarios.json', usuarios);
+
+    // Remover dos pendentes
+    cadastrosPendentes.splice(cadastroIndex, 1);
+    salvarArquivoJSON('cadastros_pendentes.json', cadastrosPendentes);
+
+    console.log(`Cadastro aprovado: ${novoUsuario.usuario} por ${req.user.usuario}`);
+
+    const { senha: _, ...usuarioResposta } = novoUsuario;
+
+    res.json({
+      success: true,
+      message: 'Cadastro aprovado com sucesso',
+      usuario: usuarioResposta
+    });
+
+  } catch (error) {
+    console.error('Erro ao aprovar cadastro:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Rejeitar Cadastro - Endpoint para admins rejeitarem cadastros
+app.post('/api/rejeitar-cadastro/:id', autenticarToken, async (req, res) => {
+  try {
+    // Verificar se usuário é admin
+    if (req.user.tipo !== 'admin' && req.user.tipo !== 'moderador') {
+      return res.status(403).json({
+        success: false,
+        message: 'Apenas administradores podem rejeitar cadastros'
+      });
+    }
+
+    const cadastroId = req.params.id;
+    const { motivo } = req.body;
+    const cadastrosPendentes = lerArquivoJSON('cadastros_pendentes.json', []);
+
+    // Encontrar cadastro pendente
+    const cadastroIndex = cadastrosPendentes.findIndex(c => c.id === cadastroId);
+    
+    if (cadastroIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cadastro pendente não encontrado'
+      });
+    }
+
+    const cadastro = cadastrosPendentes[cadastroIndex];
+
+    // Log da rejeição
+    console.log(`Cadastro rejeitado: ${cadastro.usuario} por ${req.user.usuario}. Motivo: ${motivo || 'Não informado'}`);
+
+    // Remover dos pendentes
+    cadastrosPendentes.splice(cadastroIndex, 1);
+    salvarArquivoJSON('cadastros_pendentes.json', cadastrosPendentes);
+
+    res.json({
+      success: true,
+      message: 'Cadastro rejeitado com sucesso'
+    });
+
+  } catch (error) {
+    console.error('Erro ao rejeitar cadastro:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Cadastro Direto (mantido para compatibilidade)
 app.post('/cadastro', async (req, res) => {
   try {
     const { usuario, senha, nome, sobrenome, email, telefone, fotoBase64 } = req.body;
@@ -300,7 +505,9 @@ app.get('/api/usuarios', autenticarToken, (req, res) => {
 app.get('/api/cadastros-pendentes', autenticarToken, (req, res) => {
   try {
     const cadastros = lerArquivoJSON('cadastros_pendentes.json', []);
-    res.json({ success: true, cadastros });
+    // Remover senhas dos cadastros pendentes na resposta
+    const cadastrosSemSenha = cadastros.map(({ senha, ...cadastro }) => cadastro);
+    res.json({ success: true, cadastros: cadastrosSemSenha });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erro ao carregar cadastros pendentes' });
   }
