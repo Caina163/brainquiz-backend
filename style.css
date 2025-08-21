@@ -13,8 +13,14 @@
 /* Aplicar estilos apenas ao body, não a todos os elementos */
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #0af;
+  color: black;
   background-color: #000;
+}
+
+mark {
+  background-color:  #0af;
+  color: black;
+  font-weight: #0af;
 }
 
 /* Container geral */
@@ -1001,3 +1007,4 @@ main {
 
   .user-name {
     font-size: 1.1rem
+
