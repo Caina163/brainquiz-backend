@@ -1,31 +1,17 @@
+
 [
   {
-    "id": 1,
+    "id": "admin001",
     "usuario": "admin",
+    "senha": "1574569810",
     "nome": "Administrador",
     "sobrenome": "Sistema",
-    "email": "davicaina10@gmail.com",
-    "telefone": "11999999999",
-    "senha": "1574569810",
+    "email": "admin@brainquiz.com",
+    "telefone": "",
+    "fotoBase64": null,
     "tipo": "administrador",
-    "status": "aprovado",
     "ativo": true,
-    "dataCriacao": "2024-01-15T10:00:00.000Z",
-    "ultimoLogin": "2025-07-28T12:08:45.486Z",
-    "senhaConvertidaEm": "2025-07-30T15:30:00.000Z",
-    "senhaOriginalEra": "1574569810"
-  },
-  {
-    "id": "mdlayvain3xqsj",
-    "usuario": "Castiel",
-    "senha": "$2b$10$AYgPJLC78tdapcaeqvta1elkrWmUS3q5GOg3rpkIYqaEideUkSWcq",
-    "nome": "Davi",
-    "sobrenome": "Cainã",
-    "email": "davicainabc@gmail.com",
-    "telefone": "5521982244802",
-    "tipo": "aluno",
-    "status": "aprovado",
-    "ativo": true,
-    "dataCriacao": "2025-07-27T06:33:13.524Z"
+    "criadoEm": "2025-01-01T00:00:00.000Z",
+    "ultimoLogin": null
   }
 ]
