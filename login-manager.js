@@ -24,7 +24,6 @@ class LoginManager {
       this.processarLogin();
     });
 
-    // Limpar mensagens de erro quando usuário começar a digitar
     const inputs = this.form.querySelectorAll('input');
     inputs.forEach(input => {
       input.addEventListener('input', () => {
@@ -32,7 +31,6 @@ class LoginManager {
       });
     });
 
-    // Permitir Enter para submeter
     inputs.forEach(input => {
       input.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
@@ -46,7 +44,7 @@ class LoginManager {
     try {
       const usuarioLogado = await authManager.getUsuarioAtual();
       if (usuarioLogado) {
-        console.log('✅ Usuário já está logado, redirecionando...');
+        console.log('Usuário já está logado, redirecionando...');
         window.location.href = 'https://brainquiz-wel0.onrender.com/dashboard.html';
       }
     } catch (error) {
@@ -62,7 +60,6 @@ class LoginManager {
         this.bloquearFormulario(tempoRestante);
         return true;
       } else {
-        // Bloqueio expirou, limpar dados
         localStorage.removeItem('ultimoBloqueioLogin');
         localStorage.removeItem('tentativasLogin');
       }
@@ -77,27 +74,26 @@ class LoginManager {
       return;
     }
 
-    // Obter dados do formulário
     const formData = new FormData(this.form);
-    const usuario = formData.get('usuario')?.trim();
-    const senha = formData.get('senha')?.trim();
+    const usuario = formData.get('usuario');
+    const senha = formData.get('senha');
 
-    // Validar campos
-    if (!this.validarCampos(usuario, senha)) {
+    const usuarioTrim = usuario ? usuario.trim() : '';
+    const senhaTrim = senha ? senha.trim() : '';
+
+    if (!this.validarCampos(usuarioTrim, senhaTrim)) {
       return;
     }
 
     try {
       this.mostrarCarregamento();
       
-      // Tentar fazer login
-      const resultado = await authManager.login(usuario, senha);
+      const resultado = await authManager.login(usuarioTrim, senhaTrim);
       
       if (resultado.success) {
         this.limparTentativas();
         this.mostrarSucesso('Login realizado com sucesso! Redirecionando...');
         
-        // Pequeno delay para mostrar sucesso antes de redirecionar
         setTimeout(() => {
           window.location.href = 'https://brainquiz-wel0.onrender.com/dashboard.html';
         }, 1500);
@@ -146,13 +142,12 @@ class LoginManager {
     localStorage.setItem('tentativasLogin', this.tentativasLogin.toString());
 
     if (this.tentativasLogin >= this.maxTentativas) {
-      // Bloquear por 15 minutos
       localStorage.setItem('ultimoBloqueioLogin', Date.now().toString());
       this.bloquearFormulario(this.bloqueioTempo);
-      this.mostrarErro(`Muitas tentativas falharam. Tente novamente em 15 minutos.`);
+      this.mostrarErro('Muitas tentativas falharam. Tente novamente em 15 minutos.');
     } else {
       const tentativasRestantes = this.maxTentativas - this.tentativasLogin;
-      this.mostrarErro(`${mensagem} (${tentativasRestantes} tentativas restantes)`);
+      this.mostrarErro(mensagem + ' (' + tentativasRestantes + ' tentativas restantes)');
     }
   }
 
@@ -171,15 +166,10 @@ class LoginManager {
     const contador = document.createElement('div');
     contador.id = 'contador-bloqueio';
     contador.className = 'alert alert-warning';
-    contador.innerHTML = `
-      ⏰ Conta temporariamente bloqueada. 
-      Tente novamente em <span id="tempo-restante">${minutos}</span> minuto(s).
-    `;
+    contador.innerHTML = 'Conta temporariamente bloqueada. Tente novamente em <span id="tempo-restante">' + minutos + '</span> minuto(s).';
 
-    // Inserir contador no formulário
     this.form.insertBefore(contador, this.form.firstChild);
 
-    // Atualizar contador a cada minuto
     const intervalId = setInterval(() => {
       const ultimoBloqueio = localStorage.getItem('ultimoBloqueioLogin');
       if (!ultimoBloqueio) {
@@ -199,7 +189,7 @@ class LoginManager {
           elementoTempo.textContent = minutosRestantes;
         }
       }
-    }, 60000); // Verificar a cada minuto
+    }, 60000);
   }
 
   desbloquearFormulario() {
@@ -226,27 +216,20 @@ class LoginManager {
     localStorage.removeItem('ultimoBloqueioLogin');
   }
 
-  mostrarErro(mensagem, campo = null) {
-    // Remover erros anteriores
+  mostrarErro(mensagem, campo) {
     this.limparErros();
 
-    // Criar elemento de erro
     const erro = document.createElement('div');
     erro.className = 'alert alert-danger';
-    erro.innerHTML = `
-      <i class="fas fa-exclamation-triangle"></i>
-      ${mensagem}
-    `;
+    erro.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + mensagem;
 
     if (campo) {
-      // Mostrar erro específico do campo
-      const input = this.form.querySelector(`[name="${campo}"]`);
+      const input = this.form.querySelector('[name="' + campo + '"]');
       if (input) {
         input.classList.add('is-invalid');
         input.parentElement.appendChild(erro);
       }
     } else {
-      // Mostrar erro geral
       this.form.insertBefore(erro, this.form.firstChild);
     }
   }
@@ -256,20 +239,15 @@ class LoginManager {
     
     const sucesso = document.createElement('div');
     sucesso.className = 'alert alert-success';
-    sucesso.innerHTML = `
-      <i class="fas fa-check-circle"></i>
-      ${mensagem}
-    `;
+    sucesso.innerHTML = '<i class="fas fa-check-circle"></i> ' + mensagem;
     
     this.form.insertBefore(sucesso, this.form.firstChild);
   }
 
   limparErros() {
-    // Remover alertas
     const alertas = this.form.querySelectorAll('.alert-danger, .alert-success');
     alertas.forEach(alerta => alerta.remove());
 
-    // Remover classes de erro dos inputs
     const inputs = this.form.querySelectorAll('.is-invalid');
     inputs.forEach(input => input.classList.remove('is-invalid'));
   }
@@ -278,10 +256,7 @@ class LoginManager {
     const botao = this.form.querySelector('button[type="submit"]');
     if (botao) {
       botao.disabled = true;
-      botao.innerHTML = `
-        <span class="spinner-border spinner-border-sm" role="status"></span>
-        Entrando...
-      `;
+      botao.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Entrando...';
     }
   }
 
@@ -294,14 +269,12 @@ class LoginManager {
   }
 }
 
-// Instância global
 window.loginManager = new LoginManager();
 
-// Inicializar quando a página carregar
 document.addEventListener('DOMContentLoaded', () => {
   if (window.location.pathname.includes('login.html') || window.location.pathname === '/') {
     loginManager.inicializar();
   }
 });
 
-console.log('✅ LoginManager conectado ao Render: https://brainquiz-wel0.onrender.com');
+console.log('LoginManager conectado ao Render: https://brainquiz-wel0.onrender.com');
