@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🔥 Quiz BrainQuiz - Jogue Agora</title>
+  <title>Quiz BrainQuiz - Jogue Agora</title>
   <style>
     body {
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
@@ -52,7 +52,7 @@
       }
     }
 
-    /* Quiz Container - Igual à foto */
+    /* Quiz Container */
     .quiz-container {
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
       border-radius: 20px;
@@ -605,11 +605,11 @@
   <div class="particles"></div>
   
   <div class="quiz-container" id="quiz-container">
-    <div class="loading-message">🔄 Carregando...</div>
+    <div class="loading-message">Carregando...</div>
   </div>
 
   <script>
-    // Gerenciador de Quiz Principal
+    // Gerenciador de Quiz Principal - CORRIGIDO E PADRONIZADO
     class QuizManager {
       constructor() {
         this.baseURL = 'https://brainquiz-wel0.onrender.com';
@@ -645,7 +645,7 @@
 
       async loadQuizzes() {
         try {
-          console.log('🔄 Carregando lista de quizzes...');
+          console.log('Carregando lista de quizzes...');
           
           const response = await fetch(`${this.baseURL}/api/quizzes`, {
             method: 'GET',
@@ -659,12 +659,24 @@
             throw new Error(`Erro HTTP: ${response.status}`);
           }
 
-          this.quizzes = await response.json();
-          console.log('✅ Quizzes carregados:', this.quizzes);
+          const data = await response.json();
+          
+          // PADRONIZAR resposta da API
+          if (data.quizzes) {
+            this.quizzes = data.quizzes;
+          } else if (Array.isArray(data)) {
+            this.quizzes = data;
+          } else if (data.success && data.dados) {
+            this.quizzes = data.dados;
+          } else {
+            this.quizzes = [];
+          }
+
+          console.log('Quizzes carregados:', this.quizzes);
 
         } catch (error) {
-          console.error('❌ Erro ao carregar quizzes:', error);
-          throw error;
+          console.error('Erro ao carregar quizzes:', error);
+          this.quizzes = [];
         }
       }
 
@@ -674,32 +686,32 @@
         container.innerHTML = `
           <div class="quiz-header">
             <a href="${this.baseURL}/dashboard.html" class="voltar-inicio-btn">← Dashboard</a>
-            <h1 class="quiz-titulo">🎮 Escolha um Quiz para Jogar</h1>
+            <h1 class="quiz-titulo">Escolha um Quiz para Jogar</h1>
           </div>
 
           <div class="quiz-selector">
-            <h2>📚 Quizzes Disponíveis</h2>
+            <h2>Quizzes Disponíveis</h2>
             
             <div class="quizzes-grid">
               ${this.quizzes && this.quizzes.length > 0 ? 
                 this.quizzes.map(quiz => `
                   <div class="quiz-item" onclick="window.location.href='${this.baseURL}/quiz.html?id=${quiz.id}'">
-                    <h3>🔥 ${quiz.titulo}</h3>
+                    <h3>${quiz.titulo || quiz.nome || 'Quiz sem título'}</h3>
                     <p>${quiz.descricao || 'Teste seus conhecimentos neste quiz!'}</p>
                     <div class="quiz-info">
-                      <span>📝 ${quiz.total_perguntas || 0} perguntas</span>
-                      <span>⏱️ ~${Math.round((quiz.total_perguntas || 1) * 1.5)} min</span>
+                      <span>${(quiz.perguntas?.length || quiz.total_perguntas || 0)} perguntas</span>
+                      <span>~${Math.round(((quiz.perguntas?.length || quiz.total_perguntas || 1) * 1.5))} min</span>
                     </div>
                   </div>
                 `).join('') 
                 : 
-                '<div class="quiz-item"><h3>📭 Nenhum quiz disponível</h3><p>Não há quizzes cadastrados no momento.</p></div>'
+                '<div class="quiz-item"><h3>Nenhum quiz disponível</h3><p>Não há quizzes cadastrados no momento.</p></div>'
               }
             </div>
 
             <div style="text-align: center; margin-top: 30px;">
               <button class="btn btn-primary" onclick="window.location.href='${this.baseURL}/dashboard.html'">
-                🏠 Voltar ao Dashboard
+               🏡 Voltar ao Dashboard
               </button>
             </div>
           </div>
@@ -708,7 +720,7 @@
 
       async loadQuiz() {
         try {
-          console.log('🔄 Carregando quiz ID:', this.quizId);
+          console.log('Carregando quiz ID:', this.quizId);
           
           const response = await fetch(`${this.baseURL}/api/quiz/${this.quizId}`, {
             method: 'GET',
@@ -722,15 +734,46 @@
             throw new Error(`Erro HTTP: ${response.status}`);
           }
 
-          this.quizData = await response.json();
-          console.log('✅ Quiz carregado:', this.quizData);
+          const data = await response.json();
+          
+          // PADRONIZAR resposta da API
+          if (data.quiz) {
+            this.quizData = data.quiz;
+          } else if (data.success && data.quiz) {
+            this.quizData = data.quiz;
+          } else {
+            this.quizData = data;
+          }
+
+          console.log('Quiz carregado:', this.quizData);
+
+          // PADRONIZAR estrutura do quiz
+          if (this.quizData) {
+            // Garantir que o título existe
+            if (!this.quizData.titulo && this.quizData.nome) {
+              this.quizData.titulo = this.quizData.nome;
+            }
+
+            // PADRONIZAR perguntas
+            if (this.quizData.perguntas && this.quizData.perguntas.length > 0) {
+              this.quizData.perguntas = this.quizData.perguntas.map(pergunta => ({
+                // PADRONIZAR: sempre usar 'texto' para pergunta
+                texto: pergunta.texto || pergunta.pergunta || '',
+                // PADRONIZAR: sempre usar 'resposta_correta' 
+                resposta_correta: pergunta.resposta_correta !== undefined ? pergunta.resposta_correta : (pergunta.resposta_certa || 0),
+                alternativas: pergunta.alternativas || [],
+                imagem: pergunta.imagem || null,
+                explicacao: pergunta.explicacao || null
+              }));
+            }
+          }
 
           if (!this.quizData || !this.quizData.perguntas || this.quizData.perguntas.length === 0) {
             throw new Error('Quiz não possui perguntas válidas');
           }
 
         } catch (error) {
-          console.error('❌ Erro ao carregar quiz:', error);
+          console.error('Erro ao carregar quiz:', error);
           throw error;
         }
       }
@@ -763,7 +806,7 @@
             <div class="pergunta-container">
               <div class="pergunta-card">
                 <h2 class="pergunta-titulo">Pergunta ${this.currentQuestionIndex + 1}</h2>
-                <p class="pergunta-texto">${currentQuestion.pergunta}</p>
+                <p class="pergunta-texto">${currentQuestion.texto}</p>
                 
                 <div class="alternativas-container">
                   ${currentQuestion.alternativas.map((alt, index) => `
@@ -882,9 +925,9 @@
             if (isCorrect) score++;
             
             results.push({
-              pergunta: pergunta.pergunta,
+              pergunta: pergunta.texto,
               respostaCorreta: pergunta.alternativas[pergunta.resposta_correta],
-              respostaUsuario: pergunta.alternativas[userAnswer],
+              respostaUsuario: pergunta.alternativas[userAnswer] || 'Não respondida',
               correto: isCorrect,
               explicacao: pergunta.explicacao
             });
@@ -894,7 +937,7 @@
           const tempoGasto = Math.round((endTime - this.startTime) / 1000);
           const porcentagem = Math.round((score / this.quizData.perguntas.length) * 100);
 
-          // Salvar resultado no backend
+          // Salvar resultado no backend (opcional)
           await this.saveResult(score, porcentagem, tempoGasto);
 
           // Mostrar resultado
@@ -908,19 +951,17 @@
 
       async saveResult(score, porcentagem, tempoGasto) {
         try {
-          const token = localStorage.getItem('token');
-          
           const response = await fetch(`${this.baseURL}/api/quiz-result`, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+              'Content-Type': 'application/json'
             },
             body: JSON.stringify({
               quiz_id: this.quizId,
               score: score,
               total_questions: this.quizData.perguntas.length,
               time_spent: tempoGasto,
+              percentage: porcentagem,
               answers: this.selectedAnswers
             })
           });
@@ -938,7 +979,7 @@
         
         container.innerHTML = `
           <div class="resultado-header">
-            <h1 class="quiz-titulo">🎉 Quiz Finalizado!</h1>
+            <h1 class="quiz-titulo">Quiz Finalizado!</h1>
             <div class="resultado-score">
               <div class="score-circle">
                 <span class="score-numero">${porcentagem}%</span>
@@ -949,7 +990,7 @@
           </div>
 
           <div class="resultado-detalhes">
-            <h3 style="color: #0af; text-align: center; margin-bottom: 20px;">📋 Revisão das Respostas</h3>
+            <h3 style="color: #0af; text-align: center; margin-bottom: 20px;">Revisão das Respostas</h3>
             
             ${results.map((result, index) => `
               <div class="pergunta-resultado ${result.correto ? 'acerto' : 'erro'}">
@@ -957,19 +998,17 @@
                 <div class="pergunta-texto">${result.pergunta}</div>
                 <p><strong>Sua resposta:</strong> ${result.respostaUsuario}</p>
                 ${!result.correto ? `<p><strong>Resposta correta:</strong> ${result.respostaCorreta}</p>` : ''}
-                ${result.explicacao ? `<div class="explicacao">💡 ${result.explicacao}</div>` : ''}
+                ${result.explicacao ? `<div class="explicacao">${result.explicacao}</div>` : ''}
               </div>
             `).join('')}
           </div>
 
           <div class="resultado-acoes">
             <button class="btn btn-primary" onclick="location.reload()">
-              🔄 Jogar Novamente
+              Jogar Novamente
             </button>
          
-            <button class="btn btn-secondary" onclick="window.location.href='${this.baseURL}/dashboard.html'">
-              🏠 Dashboard
-            </button>
+          
           </div>
         `;
       }
@@ -979,7 +1018,7 @@
         container.innerHTML = `
           <div class="quiz-header">
             <a href="${this.baseURL}/dashboard.html" class="voltar-inicio-btn">← Dashboard</a>
-            <h1 class="quiz-titulo">❌ Erro</h1>
+            <h1 class="quiz-titulo">Erro</h1>
           </div>
           
           <div class="error-message">
@@ -988,11 +1027,9 @@
             
             <div style="margin-top: 20px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
               <button class="btn btn-primary" onclick="location.reload()">
-                🔄 Tentar Novamente
+                Tentar Novamente
               </button>
-              <button class="btn btn-secondary" onclick="window.location.href='${this.baseURL}/dashboard.html'">
-                🏠 Dashboard
-              </button>
+             
             </div>
           </div>
         `;
@@ -1024,7 +1061,7 @@
       new QuizManager();
     });
 
-    console.log('✅ Sistema de Quiz BrainQuiz carregado!');
+    console.log('Sistema de Quiz BrainQuiz carregado - Conectado ao Render!');
   </script>
 </body>
 </html>
