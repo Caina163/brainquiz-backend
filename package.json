@@ -1,7 +1,7 @@
 {
   "name": "brainquiz-backend",
   "version": "1.0.0", 
-  "description": "Sistema BrainQuiz completo",
+  "description": "Sistema BrainQuiz completo - Servidor Render",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -22,6 +22,19 @@
   "engines": {
     "node": ">=16.0.0"
   },
-  "author": "Seu Nome",
-  "license": "MIT"
+  "author": "BrainQuiz Team",
+  "license": "MIT",
+  "homepage": "https://brainquiz-wel0.onrender.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Caina163/brainquiz-backend"
+  },
+  "keywords": [
+    "brainquiz",
+    "quiz",
+    "education",
+    "nodejs",
+    "express",
+    "render"
+  ]
 }
