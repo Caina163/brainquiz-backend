@@ -324,16 +324,16 @@
     <h1>Cadastro</h1>
     
     <div class="info-box">
-      <h3>⏳ Sistema de Aprovação:</h3>
-      <p><strong>1.</strong> Seu cadastro será enviado para aprovação</p>
-      <p><strong>2.</strong> Um administrador analisará seus dados</p>
-      <p><strong>3.</strong> Em até 2 horas você será aprovado</p>
-      <p><strong>4.</strong> Após aprovação, poderá fazer login</p>
+      <h3>📝 Cadastro Direto:</h3>
+      <p><strong>1.</strong> Preencha todos os campos corretamente</p>
+      <p><strong>2.</strong> Sua conta será criada imediatamente</p>
+      <p><strong>3.</strong> Você pode fazer login assim que cadastrar</p>
+      <p><strong>4.</strong> Bem-vindo ao BrainQuiz!</p>
     </div>
     
     <div id="errorMessage" class="error-message"></div>
     <div id="successMessage" class="success-message"></div>
-    <div id="loading" class="loading">📤 Enviando cadastro para aprovação...</div>
+    <div id="loading" class="loading">📝 Criando sua conta...</div>
     
     <form id="cadastroForm">
       <div class="photo-upload">
@@ -389,7 +389,7 @@
       </div>
       
       <button type="submit" class="cadastro-btn" id="submitBtn">
-        📝 Enviar Cadastro para Aprovação
+        📝 Criar Conta
       </button>
     </form>
     
@@ -548,7 +548,7 @@ function updateSubmitButton() {
   
   if (usuarioValido && senhaValida && senhasCoinciden) {
     submitBtn.disabled = false;
-    submitBtn.textContent = '📝 Enviar Cadastro para Aprovação';
+    submitBtn.textContent = '📝 Criar Conta';
   } else {
     submitBtn.disabled = true;
     submitBtn.textContent = '⏳ Preencha os campos corretamente';
@@ -614,7 +614,7 @@ async function realizarCadastro(formData) {
       email: formData.email,
       telefone: formData.telefone,
       fotoBase64: selectedPhoto,
-      status: 'pendente', // Marca como pendente de aprovação
+      status: 'ativo', // Usuário ativo imediatamente
       dataCadastro: new Date().toISOString()
     };
     
@@ -625,7 +625,7 @@ async function realizarCadastro(formData) {
     });
     
     // CORREÇÃO: Enviar para o endpoint correto do backend
-    const response = await fetch(`${BASE_URL}/api/cadastro`, {
+    const response = await fetch(`${BASE_URL}/cadastro`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -642,7 +642,7 @@ async function realizarCadastro(formData) {
     if (result.success) {
       console.log('✅ Cadastro enviado para aprovação com sucesso!');
       
-      mostrarSucesso('✅ Cadastro enviado com sucesso! Seu cadastro foi enviado para análise e aparecerá na aba "Cadastros" do dashboard para aprovação. Você receberá confirmação quando for aprovado. Redirecionando para o login...');
+      mostrarSucesso('✅ Cadastro realizado com sucesso! Sua conta foi criada e já está ativa. Você pode fazer login agora. Redirecionando para o login...');
       
       // Limpar formulário
       document.getElementById('cadastroForm').reset();
@@ -683,7 +683,7 @@ async function realizarCadastro(formData) {
 
 function voltarLogin() {
   console.log('🔄 Redirecionando para login...');
-  window.location.href = `${BASE_URL}/index.html`;
+  window.location.href = 'index.html';
 }
 
 // ============================================================================
@@ -764,12 +764,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 100);
   
   console.log('🔧 Sistema conectado ao backend:', BASE_URL);
-  console.log('📡 Endpoint principal: /api/cadastro');
+  console.log('📡 Endpoint principal: /cadastro');
 });
 
 console.log('🔧 Sistema de Cadastro CORRIGIDO');
 console.log('📡 Backend:', BASE_URL);
-console.log('✅ Cadastros serão enviados para a aba Cadastros do dashboard');
+console.log('✅ Cadastros serão criados diretamente como usuários ativos');
 </script>
 </body>
 </html>
