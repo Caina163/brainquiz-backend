@@ -390,13 +390,13 @@
 
   <!-- Mensagem de sucesso -->
   <div id="successMessage">
-    <h2>🎉 Quiz criado com sucesso! 🎉</h2>
+    <h2>Quiz criado com sucesso!</h2>
     <p>Redirecionando para o dashboard...</p>
     <div id="backToStart" tabindex="0">Voltar para o Dashboard</div>
   </div>
 
   <script>
-    console.log('🚀 PAINEL QUIZ CORRIGIDO - FINAL - Autenticação Melhorada');
+    console.log('Painel Quiz - Conectado ao Render');
 
     const quizInfoStep = document.getElementById('quizInfoStep');
     const questionsStep = document.getElementById('questionsStep');
@@ -434,12 +434,12 @@
       try {
         const usuario = await authManager.getUsuarioAtual();
         if (usuario) {
-          console.log('✅ Usuário autenticado:', usuario.usuario);
+          console.log('Usuário autenticado:', usuario.usuario);
           return usuario;
         }
         return false;
       } catch (error) {
-        console.error('❌ Erro ao verificar autenticação:', error);
+        console.error('Erro ao verificar autenticação:', error);
         return false;
       }
     }
@@ -447,14 +447,14 @@
     function mostrarErroAutenticacao() {
       document.body.innerHTML = `
         <div class="auth-error">
-          <h2>🔒 Acesso Negado</h2>
+          <h2>Acesso Negado</h2>
           <p>Você precisa estar logado para acessar esta página.</p>
           <p>Sua sessão pode ter expirado ou as credenciais são inválidas.</p>
           <div>
-            <button onclick="window.location.href='https://brainquiiz.netlify.app/index.html'">
-              🔑 Fazer Login
+            <button onclick="window.location.href='https://brainquiz-wel0.onrender.com/index.html'">
+              Fazer Login
             </button>
-            <button onclick="window.location.href='https://brainquiiz.netlify.app/dashboard.html'" class="secondary">
+            <button onclick="window.location.href='https://brainquiz-wel0.onrender.com/dashboard.html'" class="secondary">
               ← Voltar ao Dashboard
             </button>
           </div>
@@ -465,14 +465,14 @@
     function mostrarErroSistema(erro) {
       document.body.innerHTML = `
         <div class="auth-error">
-          <h2>❌ Erro no Sistema</h2>
+          <h2>Erro no Sistema</h2>
           <p>Ocorreu um erro ao carregar o painel de criação.</p>
           <p>Detalhes: ${erro}</p>
           <div>
             <button onclick="window.location.reload()">
-              🔄 Tentar Novamente
+              Tentar Novamente
             </button>
-            <button onclick="window.location.href='https://brainquiiz.netlify.app/dashboard.html'" class="secondary">
+            <button onclick="window.location.href='https://brainquiz-wel0.onrender.com/dashboard.html'" class="secondary">
               ← Voltar ao Dashboard
             </button>
           </div>
@@ -895,15 +895,15 @@
          }
        };
 
-       console.log('📤 Preparando para salvar quiz:', quizParaSalvar);
+       console.log('Preparando para salvar quiz:', quizParaSalvar);
 
        let salvamentoSucesso = false;
 
        // Tentar salvar no backend
        try {
-         console.log('🌐 Tentando salvar no backend...');
+         console.log('Tentando salvar no backend...');
          
-         const response = await authManager.makeAuthenticatedRequest('https://brainquiz-backend.onrender.com/api/quizzes', {
+         const response = await authManager.makeAuthenticatedRequest('https://brainquiz-wel0.onrender.com/api/quizzes', {
            method: 'POST',
            body: JSON.stringify(quizParaSalvar)
          });
@@ -911,17 +911,17 @@
          if (response.ok) {
            const result = await response.json();
            if (result.success) {
-             console.log('✅ Quiz salvo com sucesso no backend:', result);
+             console.log('Quiz salvo com sucesso no backend:', result);
              salvamentoSucesso = true;
            }
          }
        } catch (error) {
-         console.error('❌ Erro de conexão com backend:', error);
+         console.error('Erro de conexão com backend:', error);
        }
 
        // Fallback: salvar localmente se backend falhou
        if (!salvamentoSucesso) {
-         console.log('⚠️ Backend indisponível, salvando localmente...');
+         console.log('Backend indisponível, salvando localmente...');
          
          const quizId = 'quiz_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
          const quizCompleto = {
@@ -937,10 +937,10 @@
          quizzesExistentes.push(quizCompleto);
          localStorage.setItem('quizzes', JSON.stringify(quizzesExistentes));
          
-         console.log('✅ Quiz salvo localmente com sucesso!');
+         console.log('Quiz salvo localmente com sucesso!');
          salvamentoSucesso = true;
          
-         alert(`✅ Quiz salvo com sucesso!\n\n⚠️ Aviso: O quiz foi salvo localmente pois o servidor está indisponível.\nEle será sincronizado automaticamente quando a conexão for restabelecida.`);
+         alert(`Quiz salvo com sucesso!\n\nAviso: O quiz foi salvo localmente pois o servidor está indisponível.\nEle será sincronizado automaticamente quando a conexão for restabelecida.`);
        }
 
        if (salvamentoSucesso) {
@@ -953,8 +953,8 @@
        }
 
      } catch (error) {
-       console.error('❌ Erro geral ao salvar quiz:', error);
-       alert('❌ Erro inesperado ao salvar quiz. Tente novamente.');
+       console.error('Erro geral ao salvar quiz:', error);
+       alert('Erro inesperado ao salvar quiz. Tente novamente.');
      } finally {
        saveQuizBtn.classList.remove('loading');
        saveQuizBtn.textContent = 'Salvar Quiz';
@@ -972,22 +972,22 @@
 
    async function carregarQuizParaEdicao(id) {
      try {
-       console.log('🔧 Carregando quiz para edição, ID:', id);
+       console.log('Carregando quiz para edição, ID:', id);
        
        // Tentar carregar do backend primeiro
        try {
-         const response = await authManager.makeAuthenticatedRequest(`https://brainquiz-backend.onrender.com/api/quizzes/${id}`);
+         const response = await authManager.makeAuthenticatedRequest(`https://brainquiz-wel0.onrender.com/api/quizzes/${id}`);
          
          if (response.ok) {
            const data = await response.json();
            if (data.success && data.quiz) {
-             console.log('✅ Quiz carregado do backend:', data.quiz);
+             console.log('Quiz carregado do backend:', data.quiz);
              preencherFormularioComQuiz(data.quiz, id);
              return;
            }
          }
        } catch (backendError) {
-         console.log('⚠️ Backend indisponível, tentando carregar localmente...');
+         console.log('Backend indisponível, tentando carregar localmente...');
        }
        
        // Fallback: carregar do localStorage
@@ -995,7 +995,7 @@
        const quizLocal = quizzesLocais.find(q => q.id === id);
        
        if (quizLocal) {
-         console.log('✅ Quiz carregado do localStorage:', quizLocal);
+         console.log('Quiz carregado do localStorage:', quizLocal);
          preencherFormularioComQuiz(quizLocal, id);
          return;
        }
@@ -1004,7 +1004,7 @@
        voltarParaDashboard();
        
      } catch (error) {
-       console.error('❌ Erro ao carregar quiz para edição:', error);
+       console.error('Erro ao carregar quiz para edição:', error);
        alert('Erro ao carregar quiz para edição.');
        voltarParaDashboard();
      }
@@ -1042,7 +1042,7 @@
      criarBotoesQuestoes();
      carregarQuestaoAtual();
      
-     console.log('✅ Formulário preenchido com dados do quiz');
+     console.log('Formulário preenchido com dados do quiz');
    }
 
    // ============================================================================
@@ -1050,8 +1050,8 @@
    // ============================================================================
 
    function voltarParaDashboard() {
-     console.log('🔄 Redirecionando para dashboard...');
-     window.location.href = 'https://brainquiiz.netlify.app/dashboard.html';
+     console.log('Redirecionando para dashboard...');
+     window.location.href = 'https://brainquiz-wel0.onrender.com/dashboard.html';
    }
 
    backToStart.addEventListener('click', voltarParaDashboard);
@@ -1066,33 +1066,33 @@
    // ============================================================================
 
    window.onload = async function() {
-     console.log('🚀 Inicializando Painel Quiz CORRIGIDO - FINAL...');
+     console.log('Inicializando Painel Quiz...');
      
      try {
        // Verificar autenticação
        const usuario = await verificarAutenticacao();
        if (!usuario) {
-         console.log('❌ Usuário não autenticado');
+         console.log('Usuário não autenticado');
          mostrarErroAutenticacao();
          return;
        }
        
-       console.log('✅ Usuário autenticado:', usuario.usuario);
+       console.log('Usuário autenticado:', usuario.usuario);
        usuarioLogado = usuario;
        
        // Verificar se está editando um quiz
        const idEdit = getUrlParam('id');
        if (idEdit !== null) {
-         console.log('🔧 Modo edição - ID:', idEdit);
+         console.log('Modo edição - ID:', idEdit);
          await carregarQuizParaEdicao(idEdit);
        } else {
-         console.log('📝 Modo criação - novo quiz');
+         console.log('Modo criação - novo quiz');
        }
        
-       console.log('✅ Painel inicializado com sucesso!');
+       console.log('Painel inicializado com sucesso!');
        
      } catch (error) {
-       console.error('❌ Erro na inicialização:', error);
+       console.error('Erro na inicialização:', error);
        mostrarErroSistema(error.message);
      }
    };
@@ -1104,8 +1104,7 @@
    window.excluirAlternativa = excluirAlternativa;
    window.voltarParaDashboard = voltarParaDashboard;
 
-   console.log('🎯 PAINEL QUIZ CORRIGIDO FINAL - Integrado com auth.js!');
+   console.log('Painel Quiz conectado ao Render: https://brainquiz-wel0.onrender.com');
  </script>
 </body>
 </html>
-          
