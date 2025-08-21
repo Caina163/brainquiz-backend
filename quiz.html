@@ -390,6 +390,62 @@
       font-size: 1.1rem;
     }
 
+    /* Seleção de Quiz */
+    .quiz-selector {
+      text-align: center;
+      padding: 40px;
+    }
+
+    .quiz-selector h2 {
+      color: #0af;
+      font-size: 1.8rem;
+      margin-bottom: 30px;
+      text-shadow: 0 0 10px rgba(0,170,255,0.5);
+    }
+
+    .quizzes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .quiz-item {
+      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(0,170,255,0.3);
+      border-radius: 15px;
+      padding: 25px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .quiz-item:hover {
+      background: rgba(0,170,255,0.2);
+      border-color: #0af;
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0,170,255,0.3);
+    }
+
+    .quiz-item h3 {
+      color: #fff;
+      font-size: 1.3rem;
+      margin: 0 0 15px 0;
+    }
+
+    .quiz-item p {
+      color: rgba(255,255,255,0.8);
+      margin: 0 0 15px 0;
+      line-height: 1.5;
+    }
+
+    .quiz-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      color: #0af;
+    }
+
     /* Resultado do Quiz */
     .resultado-container {
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
@@ -538,6 +594,10 @@
         padding: 8px 15px;
         font-size: 0.8rem;
       }
+
+      .quizzes-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -545,7 +605,7 @@
   <div class="particles"></div>
   
   <div class="quiz-container" id="quiz-container">
-    <div class="loading-message">🔄 Carregando quiz...</div>
+    <div class="loading-message">🔄 Carregando...</div>
   </div>
 
   <script>
@@ -559,26 +619,91 @@
         this.startTime = new Date();
         this.quizId = null;
         
-        // Pegar o ID do quiz da URL
+        // Pegar o ID do quiz da URL (se existir)
         const urlParams = new URLSearchParams(window.location.search);
         this.quizId = urlParams.get('id');
-        
-        if (!this.quizId) {
-          this.showError('ID do quiz não encontrado na URL');
-          return;
-        }
         
         this.init();
       }
 
       async init() {
         try {
-          await this.loadQuiz();
-          this.renderQuiz();
+          if (this.quizId) {
+            // Modo: Jogar quiz específico
+            await this.loadQuiz();
+            this.renderQuiz();
+          } else {
+            // Modo: Seleção de quiz
+            await this.loadQuizzes();
+            this.renderQuizSelector();
+          }
         } catch (error) {
           console.error('Erro na inicialização:', error);
-          this.showError('Erro ao carregar o quiz');
+          this.showError('Erro ao carregar o sistema');
         }
+      }
+
+      async loadQuizzes() {
+        try {
+          console.log('🔄 Carregando lista de quizzes...');
+          
+          const response = await fetch(`${this.baseURL}/api/quizzes`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+          }
+
+          this.quizzes = await response.json();
+          console.log('✅ Quizzes carregados:', this.quizzes);
+
+        } catch (error) {
+          console.error('❌ Erro ao carregar quizzes:', error);
+          throw error;
+        }
+      }
+
+      renderQuizSelector() {
+        const container = document.getElementById('quiz-container');
+        
+        container.innerHTML = `
+          <div class="quiz-header">
+            <a href="${this.baseURL}/dashboard.html" class="voltar-inicio-btn">← Dashboard</a>
+            <h1 class="quiz-titulo">🎮 Escolha um Quiz para Jogar</h1>
+          </div>
+
+          <div class="quiz-selector">
+            <h2>📚 Quizzes Disponíveis</h2>
+            
+            <div class="quizzes-grid">
+              ${this.quizzes && this.quizzes.length > 0 ? 
+                this.quizzes.map(quiz => `
+                  <div class="quiz-item" onclick="window.location.href='${this.baseURL}/quiz.html?id=${quiz.id}'">
+                    <h3>🔥 ${quiz.titulo}</h3>
+                    <p>${quiz.descricao || 'Teste seus conhecimentos neste quiz!'}</p>
+                    <div class="quiz-info">
+                      <span>📝 ${quiz.total_perguntas || 0} perguntas</span>
+                      <span>⏱️ ~${Math.round((quiz.total_perguntas || 1) * 1.5)} min</span>
+                    </div>
+                  </div>
+                `).join('') 
+                : 
+                '<div class="quiz-item"><h3>📭 Nenhum quiz disponível</h3><p>Não há quizzes cadastrados no momento.</p></div>'
+              }
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+              <button class="btn btn-primary" onclick="window.location.href='${this.baseURL}/dashboard.html'">
+                🏠 Voltar ao Dashboard
+              </button>
+            </div>
+          </div>
+        `;
       }
 
       async loadQuiz() {
@@ -616,7 +741,7 @@
         
         container.innerHTML = `
           <div class="quiz-header">
-            <a href="${this.baseURL}/dashboard.html" class="voltar-inicio-btn">← Voltar</a>
+            <a href="${this.baseURL}/quiz.html" class="voltar-inicio-btn">← Voltar</a>
             
             <h1 class="quiz-titulo">${this.quizData.titulo}</h1>
             
@@ -663,7 +788,7 @@
           </div>
 
           <div class="quiz-footer">
-            <button class="btn btn-outline-danger" onclick="if(confirm('Deseja realmente abandonar o quiz?')) window.location.href='${this.baseURL}/dashboard.html'">
+            <button class="btn btn-outline-danger" onclick="if(confirm('Deseja realmente abandonar o quiz?')) window.location.href='${this.baseURL}/quiz.html'">
               Abandonar Quiz
             </button>
           </div>
@@ -841,8 +966,9 @@
             <button class="btn btn-primary" onclick="location.reload()">
               🔄 Jogar Novamente
             </button>
+         
             <button class="btn btn-secondary" onclick="window.location.href='${this.baseURL}/dashboard.html'">
-              🏠 Voltar ao Dashboard
+              🏠 Dashboard
             </button>
           </div>
         `;
@@ -851,12 +977,23 @@
       showError(message) {
         const container = document.getElementById('quiz-container');
         container.innerHTML = `
+          <div class="quiz-header">
+            <a href="${this.baseURL}/dashboard.html" class="voltar-inicio-btn">← Dashboard</a>
+            <h1 class="quiz-titulo">❌ Erro</h1>
+          </div>
+          
           <div class="error-message">
-            <h3>❌ Erro</h3>
+            <h3>Ops! Algo deu errado</h3>
             <p>${message}</p>
-            <button class="btn btn-primary" onclick="window.location.href='${this.baseURL}/dashboard.html'" style="margin-top: 15px;">
-              🏠 Voltar ao Dashboard
-            </button>
+            
+            <div style="margin-top: 20px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+              <button class="btn btn-primary" onclick="location.reload()">
+                🔄 Tentar Novamente
+              </button>
+              <button class="btn btn-secondary" onclick="window.location.href='${this.baseURL}/dashboard.html'">
+                🏠 Dashboard
+              </button>
+            </div>
           </div>
         `;
       }
@@ -887,10 +1024,7 @@
       new QuizManager();
     });
 
-    console.log('✅ Quiz com layout moderno carregado!');
+    console.log('✅ Sistema de Quiz BrainQuiz carregado!');
   </script>
 </body>
 </html>
-
-
-
