@@ -6,483 +6,995 @@
   <script src="auth.js"></script>
   <script src="dashboard-manager.js"></script>
   <link rel="stylesheet" href="system-styles.css">
-  <style>
-    body {
-      background: linear-gradient(135deg, #000 0%, #1a1a2e 50%, #16213e 100%);
-      color: #0af;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      margin: 0;
-      padding: 20px;
-      min-height: 100vh;
-      position: relative;
-      overflow-x: hidden;
-    }
+</head>
+<body>
+  <div class="particles"></div>
+  
+  <header>
+    <h1>🧠 BrainQuiz - Painel</h1>
+    <div class="header-buttons">
+      <button id="createQuizBtn" title="Criar novo quiz">📝 Criar Quiz</button>
+      <button id="exitBtn" title="Sair do sistema">🚪 Sair</button>
+    </div>
+  </header>
+  
+  <div id="tabs">
+    <button class="tab-button active" data-tab="ativos">🎯 Quizzes Ativos</button>
+    <button class="tab-button" data-tab="arquivados">📁 Arquivados</button>
+    <button class="tab-button" data-tab="excluidos">🗑️ Excluídos</button>
+    <button class="tab-button" data-tab="usuarios">👥 Usuários</button>
+    <button class="tab-button" data-tab="cadastros">⏳ Cadastros Pendentes</button>
+    <button class="tab-button" data-tab="pdfs">📄 PDFs</button>
+    <button class="tab-button" data-tab="calendario">📅 Calendário</button>
+    <button class="tab-button" data-tab="perfil">👤 Meu Perfil</button>
+  </div>
 
-    /* Particles Animation */
-    .particles {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: -1;
-    }
-    
-    .particle {
-      position: absolute;
-      width: 2px;
-      height: 2px;
-      background: #0af;
-      border-radius: 50%;
-      animation: float 8s infinite linear;
-      box-shadow: 0 0 10px #0af;
-    }
-    
-    @keyframes float {
-      0% { transform: translateY(100vh) translateX(0px); opacity: 0; }
-      10% { opacity: 1; }
-      90% { opacity: 1; }
-      100% { transform: translateY(-100px) translateX(100px); opacity: 0; }
-    }
+  <main id="mainContainer">
+    <div id="quizzesContainer"></div>
+  </main>
 
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      max-width: 1200px;
-      margin: 0 auto 20px;
-      background: rgba(17, 17, 17, 0.8);
-      padding: 20px 30px;
-      border-radius: 15px;
-      backdrop-filter: blur(10px);
-      border: 2px solid rgba(0, 170, 255, 0.3);
-      box-shadow: 0 0 30px rgba(0, 170, 255, 0.2);
-    }
-    
-    h1 {
-      margin: 0;
-      text-shadow: 0 0 20px #0af;
-      font-size: 2.5rem;
-      animation: pulse 3s infinite;
-    }
+  <div id="mensagemSucesso"></div>
 
-    @keyframes pulse {
-      0%, 100% { text-shadow: 0 0 20px #0af; }
-      50% { text-shadow: 0 0 40px #0af, 0 0 60px #0af; }
-    }
-    
-    .header-buttons {
-      display: flex;
-      gap: 15px;
-      align-items: center;
-    }
-    
-    #createQuizBtn, #exitBtn {
-      background: linear-gradient(45deg, #0af, #08c);
-      border: none;
-      border-radius: 10px;
-      padding: 12px 24px;
-      color: #000;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 5px 20px rgba(0, 170, 255, 0.3);
-      transition: all 0.3s ease;
-    }
-    
-    #createQuizBtn:hover, #exitBtn:hover {
-      background: linear-gradient(45deg, #08c, #0af);
-      color: #fff;
-      box-shadow: 0 8px 30px rgba(0, 170, 255, 0.6);
-      transform: translateY(-3px);
-    }
-    
-    #exitBtn {
-      background: linear-gradient(45deg, #ff4444, #cc0000);
-      box-shadow: 0 5px 20px rgba(255, 68, 68, 0.3);
-    }
-    
-    #exitBtn:hover {
-      background: linear-gradient(45deg, #cc0000, #ff4444);
-      box-shadow: 0 8px 30px rgba(255, 68, 68, 0.6);
-    }
-    
-    #tabs {
-      max-width: 1200px;
-      margin: 0 auto 20px;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-      background: rgba(17, 17, 17, 0.6);
-      padding: 15px;
-      border-radius: 15px;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(0, 170, 255, 0.2);
-    }
-    
-    .tab-button {
-      background: rgba(34, 34, 34, 0.8);
-      border: none;
-      border-radius: 10px;
-      padding: 12px 20px;
-      color: #0af;
-      cursor: pointer;
-      box-shadow: 0 5px 15px rgba(0, 170, 255, 0.2);
-      font-weight: bold;
-      transition: all 0.3s ease;
-      flex-shrink: 0;
-    }
-    
-    .tab-button.active, .tab-button:hover {
-      background: linear-gradient(45deg, #0af, #08c);
-      color: #000;
-      box-shadow: 0 8px 25px rgba(0, 170, 255, 0.4);
-      transform: translateY(-2px);
-    }
-    
-    #quizzesContainer {
-      max-width: 1200px;
-      margin: 0 auto;
-      min-height: 200px;
-    }
-    
-    .section-container {
-      margin-bottom: 40px;
-    }
-    
-    .section-header {
-      color: #0af;
-      font-size: 1.8rem;
-      margin: 0 0 20px 0;
-      text-shadow: 0 0 15px #0af;
-      border-bottom: 3px solid #0af;
-      padding-bottom: 10px;
-      text-align: center;
-      background: linear-gradient(90deg, transparent, rgba(0,170,255,0.1), transparent);
-      padding: 15px;
-      border-radius: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(0, 170, 255, 0.3);
-    }
+  <!-- Containers específicos para o dashboard-manager.js -->
+  <div id="quizzes-container" style="display: none;"></div>
+  <div id="arquivados-container" style="display: none;"></div>
+  <div id="excluidos-container" style="display: none;"></div>
+  <div id="usuarios-container" style="display: none;"></div>
+  <div id="cadastros-container" style="display: none;"></div>
+  <div id="pdfs-container" style="display: none;"></div>
 
-    /* MODAL CENTRALIZADO E BONITO PARA EDIÇÃO */
-    .modal-backdrop {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.85);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-      backdrop-filter: blur(8px);
-      animation: fadeIn 0.3s ease-out;
-    }
+  <input type="file" id="upload-pdf" accept=".pdf" style="display: none;" onchange="dashboardManager.uploadPDF(this)">
 
-    @keyframes fadeIn {
-      from { opacity: 0; backdrop-filter: blur(0px); }
-      to { opacity: 1; backdrop-filter: blur(8px); }
-    }
+<script>
+console.log('🚀 DASHBOARD COMPLETO - v12.0 COM TODAS AS CORREÇÕES');
 
-    .modal-content {
-      background: linear-gradient(145deg, rgba(26, 26, 46, 0.95), rgba(22, 33, 62, 0.95));
-      border-radius: 20px;
-      max-width: 550px;
-      width: 90%;
-      max-height: 85vh;
-      overflow-y: auto;
-      border: 3px solid rgba(0, 170, 255, 0.5);
-      backdrop-filter: blur(20px);
-      box-shadow: 
-        0 25px 50px rgba(0, 0, 0, 0.9),
-        0 0 100px rgba(0, 170, 255, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-      animation: modalSlideIn 0.4s ease-out;
-      position: relative;
-    }
+// ============================================================================
+// VARIÁVEIS GLOBAIS
+// ============================================================================
 
-    @keyframes modalSlideIn {
-      from { 
-        opacity: 0; 
-        transform: translateY(-50px) scale(0.9); 
+let usuarioLogado = null;
+let currentTab = 'ativos';
+
+const quizzesContainer = document.getElementById('quizzesContainer');
+const createQuizBtn = document.getElementById('createQuizBtn');
+const exitBtn = document.getElementById('exitBtn');
+const mensagemSucesso = document.getElementById('mensagemSucesso');
+
+// ============================================================================
+// EFEITOS VISUAIS
+// ============================================================================
+
+function criarParticulas() {
+  const container = document.querySelector('.particles');
+  
+  setInterval(() => {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    particle.style.left = Math.random() * 100 + 'vw';
+    particle.style.animationDelay = Math.random() * 2 + 's';
+    container.appendChild(particle);
+    
+    setTimeout(() => {
+      if (particle.parentNode) {
+        particle.parentNode.removeChild(particle);
       }
-      to { 
-        opacity: 1; 
-        transform: translateY(0) scale(1); 
+    }, 8000);
+  }, 500);
+}
+
+// ============================================================================
+// AUTENTICAÇÃO
+// ============================================================================
+
+async function verificarUsuarioLogado() {
+  console.log('🔍 Verificando sessão do usuário...');
+  
+  try {
+    const usuario = await authManager.getUsuarioAtual();
+    if (usuario) {
+      usuarioLogado = usuario;
+      console.log('✅ Usuário autenticado:', usuarioLogado.usuario);
+      return true;
+    }
+    
+    console.log('❌ Usuário não autenticado, redirecionando...');
+    window.location.href = 'https://brainquiz-wel0.onrender.com/index.html';
+    return false;
+    
+  } catch (error) {
+    console.error('❌ Erro ao verificar sessão:', error);
+    window.location.href = 'https://brainquiz-wel0.onrender.com/index.html';
+    return false;
+  }
+}
+
+// ============================================================================
+// CORREÇÃO 1: MODAL DE EDIÇÃO DE USUÁRIOS COM CONFIRMAÇÃO DE SENHA
+// ============================================================================
+
+window.editarUsuarioModal = function(usuarioId) {
+  console.log('🔧 Abrindo modal de edição para usuário:', usuarioId);
+  
+  const usuario = dashboardManager.dados.usuarios.find(u => u.id === usuarioId);
+  if (!usuario) {
+    mostrarMensagemErro('Usuário não encontrado');
+    return;
+  }
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>✏️ Editar Usuário</h3>
+        <button onclick="this.closest('.modal-backdrop').remove()" class="btn-close">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-editar-usuario">
+          <div class="form-group">
+            <label>Nome:</label>
+            <input type="text" id="edit-nome" value="${usuario.nome}" required>
+          </div>
+          <div class="form-group">
+            <label>Sobrenome:</label>
+            <input type="text" id="edit-sobrenome" value="${usuario.sobrenome || ''}">
+          </div>
+          <div class="form-group">
+            <label>Email:</label>
+            <input type="email" id="edit-email" value="${usuario.email || ''}" required>
+          </div>
+          <div class="form-group">
+            <label>Usuário:</label>
+            <input type="text" id="edit-usuario" value="${usuario.usuario}" required>
+          </div>
+          <div class="form-group">
+            <label>Tipo:</label>
+            <select id="edit-tipo">
+              <option value="usuario" ${usuario.tipo === 'usuario' ? 'selected' : ''}>Usuário</option>
+              <option value="moderador" ${usuario.tipo === 'moderador' ? 'selected' : ''}>Moderador</option>
+              <option value="administrador" ${usuario.tipo === 'administrador' ? 'selected' : ''}>Administrador</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Nova Senha (deixe vazio para manter):</label>
+            <input type="password" id="edit-nova-senha" placeholder="Digite uma nova senha ou deixe vazio">
+          </div>
+          <div class="form-group senha-required">
+            <label>* Confirme sua senha atual para salvar:</label>
+            <input type="password" id="edit-confirmar-senha" placeholder="Digite sua senha atual" required class="senha-required">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button onclick="this.closest('.modal-backdrop').remove()" class="btn btn-secondary">Cancelar</button>
+        <button onclick="salvarEdicaoUsuario('${usuario.id}')" class="btn btn-primary">💾 Salvar</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+}
+
+window.salvarEdicaoUsuario = async function(usuarioId) {
+  try {
+    const dados = {
+      nome: document.getElementById('edit-nome').value,
+      sobrenome: document.getElementById('edit-sobrenome').value,
+      email: document.getElementById('edit-email').value,
+      usuario: document.getElementById('edit-usuario').value,
+      tipo: document.getElementById('edit-tipo').value,
+      novaSenha: document.getElementById('edit-nova-senha').value,
+      senhaConfirmacao: document.getElementById('edit-confirmar-senha').value
+    };
+
+    if (!dados.senhaConfirmacao) {
+      mostrarMensagemErro('Digite sua senha para confirmar as alterações');
+      return;
+    }
+
+    mostrarLoading('Salvando alterações...');
+
+    const response = await authManager.makeAuthenticatedRequest(`https://brainquiz-wel0.onrender.com/api/usuario/${usuarioId}`, {
+      method: 'PUT',
+      body: JSON.stringify(dados)
+    });
+
+    if (response.ok) {
+      document.querySelector('.modal-backdrop').remove();
+      await dashboardManager.carregarTodosDados();
+      mostrarMensagemSucesso('Usuário atualizado com sucesso');
+    } else {
+      const data = await response.json();
+      throw new Error(data.message || 'Falha ao atualizar usuário');
+    }
+  } catch (error) {
+    console.error('Erro ao salvar usuário:', error);
+    mostrarMensagemErro(`Erro ao salvar: ${error.message}`);
+  } finally {
+    esconderLoading();
+  }
+}
+
+// ============================================================================
+// CORREÇÃO 2: UPLOAD DE PDF SEM REDIRECIONAMENTO
+// ============================================================================
+
+window.uploadPDFCorrigido = async function(input) {
+  console.log('📁 Iniciando upload de PDF corrigido...');
+  
+  const file = input.files[0];
+  if (!file) {
+    console.log('❌ Nenhum arquivo selecionado');
+    return;
+  }
+
+  if (file.type !== 'application/pdf') {
+    mostrarMensagemErro('Apenas arquivos PDF são permitidos');
+    input.value = '';
+    return;
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    mostrarMensagemErro('Arquivo muito grande. Máximo 10MB permitido');
+    input.value = '';
+    return;
+  }
+
+  try {
+    mostrarLoading('Enviando PDF...');
+
+    const formData = new FormData();
+    formData.append('pdf', file);
+
+    // Usar fetch direto para evitar redirecionamento
+    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    const response = await fetch('https://brainquiz-wel0.onrender.com/api/upload-pdf', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    if (response.ok) {
+      console.log('✅ PDF enviado com sucesso');
+      await dashboardManager.carregarTodosDados();
+      mostrarMensagemSucesso('PDF enviado com sucesso');
+      input.value = '';
+    } else {
+      const data = await response.json();
+      throw new Error(data.message || 'Falha no upload');
+    }
+  } catch (error) {
+    console.error('Erro no upload:', error);
+    mostrarMensagemErro(`Erro ao enviar PDF: ${error.message}`);
+    input.value = '';
+  } finally {
+    esconderLoading();
+  }
+}
+
+// ============================================================================
+// CORREÇÃO 3: APROVAR/REJEITAR CADASTROS PENDENTES
+// ============================================================================
+
+window.aprovarCadastroCorrigido = async function(cadastroId) {
+  console.log('✅ Aprovando cadastro:', cadastroId);
+  
+  if (!confirm('Tem certeza que deseja aprovar este cadastro?')) return;
+
+  try {
+    mostrarLoading('Aprovando cadastro...');
+
+    const response = await authManager.makeAuthenticatedRequest(`https://brainquiz-wel0.onrender.com/api/cadastro/${cadastroId}/aprovar`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      console.log('✅ Cadastro aprovado com sucesso');
+      await dashboardManager.carregarTodosDados();
+      mostrarMensagemSucesso('Cadastro aprovado com sucesso');
+    } else {
+      const data = await response.json();
+      throw new Error(data.message || 'Falha ao aprovar');
+    }
+  } catch (error) {
+    console.error('Erro ao aprovar cadastro:', error);
+    mostrarMensagemErro(`Erro ao aprovar cadastro: ${error.message}`);
+  } finally {
+    esconderLoading();
+  }
+}
+
+window.rejeitarCadastroCorrigido = async function(cadastroId) {
+  console.log('❌ Rejeitando cadastro:', cadastroId);
+  
+  if (!confirm('Tem certeza que deseja rejeitar este cadastro?')) return;
+
+  try {
+    mostrarLoading('Rejeitando cadastro...');
+
+    const response = await authManager.makeAuthenticatedRequest(`https://brainquiz-wel0.onrender.com/api/cadastro/${cadastroId}/rejeitar`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      console.log('✅ Cadastro rejeitado com sucesso');
+      await dashboardManager.carregarTodosDados();
+      mostrarMensagemSucesso('Cadastro rejeitado com sucesso');
+    } else {
+      const data = await response.json();
+      throw new Error(data.message || 'Falha ao rejeitar');
+    }
+  } catch (error) {
+    console.error('Erro ao rejeitar cadastro:', error);
+    mostrarMensagemErro(`Erro ao rejeitar cadastro: ${error.message}`);
+  } finally {
+    esconderLoading();
+  }
+}
+
+// ============================================================================
+// CORREÇÃO 4: FUNÇÕES DA ENGRENAGEM DOS USUÁRIOS
+// ============================================================================
+
+window.alternarStatusUsuarioCorrigido = async function(usuarioId) {
+  console.log('⚙️ Alterando status do usuário:', usuarioId);
+  
+  try {
+    const usuario = dashboardManager.dados.usuarios.find(u => u.id === usuarioId);
+    if (!usuario) {
+      mostrarMensagemErro('Usuário não encontrado');
+      return;
+    }
+
+    const novoStatus = !usuario.ativo;
+    const acao = novoStatus ? 'ativar' : 'desativar';
+    
+    if (!confirm(`Tem certeza que deseja ${acao} este usuário?`)) return;
+
+    mostrarLoading(`${acao.charAt(0).toUpperCase() + acao.slice(1)}ando usuário...`);
+
+    const response = await authManager.makeAuthenticatedRequest(`https://brainquiz-wel0.onrender.com/api/usuario/${usuarioId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ ativo: novoStatus })
+    });
+
+    if (response.ok) {
+      console.log(`✅ Usuário ${acao}do com sucesso`);
+      await dashboardManager.carregarTodosDados();
+      mostrarMensagemSucesso(`Usuário ${acao}do com sucesso`);
+    } else {
+      const data = await response.json();
+      throw new Error(data.message || `Falha ao ${acao}`);
+    }
+  } catch (error) {
+    console.error('Erro ao alterar status do usuário:', error);
+    mostrarMensagemErro(`Erro ao alterar status: ${error.message}`);
+  } finally {
+    esconderLoading();
+  }
+}
+
+window.excluirUsuarioCorrigido = async function(usuarioId) {
+  console.log('🗑️ Excluindo usuário:', usuarioId);
+  
+  if (!confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.')) return;
+
+  try {
+    mostrarLoading('Excluindo usuário...');
+
+    const response = await authManager.makeAuthenticatedRequest(`https://brainquiz-wel0.onrender.com/api/usuario/${usuarioId}`, {
+      method: 'DELETE'
+    });
+
+    if (response.ok) {
+      console.log('✅ Usuário excluído com sucesso');
+      await dashboardManager.carregarTodosDados();
+      mostrarMensagemSucesso('Usuário excluído com sucesso');
+    } else {
+      const data = await response.json();
+      throw new Error(data.message || 'Falha ao excluir');
+    }
+  } catch (error) {
+    console.error('Erro ao excluir usuário:', error);
+    mostrarMensagemErro(`Erro ao excluir usuário: ${error.message}`);
+  } finally {
+    esconderLoading();
+  }
+}
+
+// ============================================================================
+// SOBRESCREVER FUNÇÕES DO DASHBOARD-MANAGER.JS
+// ============================================================================
+
+// Aguardar dashboard-manager carregar e sobrescrever suas funções
+document.addEventListener('DOMContentLoaded', () => {
+  const aguardarDashboardManager = () => {
+    if (window.dashboardManager) {
+      // Sobrescrever funções com as corrigidas
+      dashboardManager.editarUsuario = editarUsuarioModal;
+      dashboardManager.uploadPDF = uploadPDFCorrigido;
+      dashboardManager.aprovarCadastro = aprovarCadastroCorrigido;
+      dashboardManager.rejeitarCadastro = rejeitarCadastroCorrigido;
+      dashboardManager.alternarStatusUsuario = alternarStatusUsuarioCorrigido;
+      dashboardManager.excluirUsuario = excluirUsuarioCorrigido;
+      
+      console.log('✅ Funções do dashboard-manager sobrescritas com correções');
+    } else {
+      setTimeout(aguardarDashboardManager, 100);
+    }
+  };
+  aguardarDashboardManager();
+});
+
+// ============================================================================
+// CONFIGURAÇÃO DOS BOTÕES E INTERFACE
+// ============================================================================
+
+function configurarBotoesPrincipais() {
+  console.log('⚙️ Configurando botões principais...');
+  
+  createQuizBtn.onclick = () => {
+    console.log('🔄 Redirecionando para criação de quiz...');
+    window.location.href = 'https://brainquiz-wel0.onrender.com/painel.html';
+  };
+
+  exitBtn.onclick = async () => {
+    if (confirm('Deseja realmente sair do sistema?')) {
+      console.log('👋 Fazendo logout...');
+      try {
+        await authManager.logout();
+        window.location.href = 'https://brainquiz-wel0.onrender.com/index.html';
+      } catch (error) {
+        console.error('Erro no logout:', error);
+        window.location.href = 'https://brainquiz-wel0.onrender.com/index.html';
       }
     }
+  };
+}
 
-    .modal-header {
-      padding: 25px 30px;
-      border-bottom: 2px solid rgba(0, 170, 255, 0.4);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: linear-gradient(135deg, rgba(0, 170, 255, 0.1), rgba(8, 204, 255, 0.05));
-      border-radius: 17px 17px 0 0;
+function configurarTabs() {
+  console.log('⚙️ Configurando abas...');
+  
+  const tabUsuarios = document.querySelector('[data-tab="usuarios"]');
+  const tabCadastros = document.querySelector('[data-tab="cadastros"]');
+  const tabArquivados = document.querySelector('[data-tab="arquivados"]');
+  const tabExcluidos = document.querySelector('[data-tab="excluidos"]');
+  
+  if (usuarioLogado.tipo === 'usuario') {
+    tabUsuarios.style.display = 'none';
+    tabCadastros.style.display = 'none';
+    tabArquivados.style.display = 'none';
+    tabExcluidos.style.display = 'none';
+  } else if (usuarioLogado.tipo === 'moderador') {
+    tabUsuarios.style.display = 'inline-block';
+    tabCadastros.style.display = 'inline-block';
+    tabArquivados.style.display = 'none';
+    tabExcluidos.style.display = 'none';
+  } else if (usuarioLogado.tipo === 'administrador') {
+    tabUsuarios.style.display = 'inline-block';
+    tabCadastros.style.display = 'inline-block';
+    tabArquivados.style.display = 'inline-block';
+    tabExcluidos.style.display = 'inline-block';
+  }
+
+  const tabs = document.querySelectorAll('.tab-button');
+  tabs.forEach(tab => {
+    tab.removeEventListener('click', handleTabClick);
+    tab.addEventListener('click', handleTabClick);
+  });
+}
+
+function handleTabClick(event) {
+  const tab = event.currentTarget;
+  const tabName = tab.getAttribute('data-tab');
+  
+  console.log('🔄 Clique na aba:', tabName);
+  
+  document.querySelectorAll('.tab-button').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  
+  currentTab = tabName;
+  exibirConteudo();
+}
+
+function exibirConteudo() {
+  console.log('📺 Exibindo conteúdo da aba:', currentTab);
+  
+  quizzesContainer.innerHTML = '';
+  
+  const containers = ['quizzes-container', 'arquivados-container', 'excluidos-container', 
+                     'usuarios-container', 'cadastros-container', 'pdfs-container'];
+  containers.forEach(id => {
+    const container = document.getElementById(id);
+    if (container) {
+      container.style.display = 'none';
     }
+  });
 
-    .modal-header h3 {
-      margin: 0;
-      color: #0af;
-      text-shadow: 0 0 15px rgba(0, 170, 255, 0.7);
-      font-size: 1.5rem;
-      font-weight: 600;
-    }
+  switch (currentTab) {
+    case 'ativos':
+      const quizzesContainer = document.getElementById('quizzes-container');
+      if (quizzesContainer) {
+        quizzesContainer.style.display = 'block';
+        document.getElementById('quizzesContainer').appendChild(quizzesContainer);
+      }
+      break;
+      
+    case 'arquivados':
+      const arquivadosContainer = document.getElementById('arquivados-container');
+      if (arquivadosContainer) {
+        arquivadosContainer.style.display = 'block';
+        document.getElementById('quizzesContainer').appendChild(arquivadosContainer);
+      }
+      break;
+      
+    case 'excluidos':
+      const excluidosContainer = document.getElementById('excluidos-container');
+      if (excluidosContainer) {
+        excluidosContainer.style.display = 'block';
+        document.getElementById('quizzesContainer').appendChild(excluidosContainer);
+      }
+      break;
+      
+    case 'usuarios':
+      const usuariosContainer = document.getElementById('usuarios-container');
+      if (usuariosContainer) {
+        usuariosContainer.style.display = 'block';
+        document.getElementById('quizzesContainer').appendChild(usuariosContainer);
+      }
+      break;
+      
+    case 'cadastros':
+      const cadastrosContainer = document.getElementById('cadastros-container');
+      if (cadastrosContainer) {
+        cadastrosContainer.style.display = 'block';
+        document.getElementById('quizzesContainer').appendChild(cadastrosContainer);
+      }
+      break;
+      
+    case 'pdfs':
+      const pdfsContainer = document.getElementById('pdfs-container');
+      if (pdfsContainer) {
+        pdfsContainer.style.display = 'block';
+        document.getElementById('quizzesContainer').appendChild(pdfsContainer);
+      }
+      break;
+      
+    case 'calendario':
+      exibirCalendario();
+      break;
+      
+    case 'perfil':
+      exibirPerfil();
+      break;
+  }
 
-    .btn-close {
-      background: rgba(255, 68, 68, 0.2);
-      border: 2px solid rgba(255, 68, 68, 0.5);
-      color: #ff4444;
-      font-size: 1.8rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      width: 40px;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      font-weight: bold;
-    }
+  if (dashboardManager && dashboardManager.renderizarDados && currentTab !== 'calendario' && currentTab !== 'perfil') {
+    dashboardManager.renderizarDados();
+  }
+}
 
-    .btn-close:hover {
-      background: rgba(255, 68, 68, 0.4);
-      border-color: #ff4444;
-      transform: scale(1.1) rotate(90deg);
-      box-shadow: 0 0 20px rgba(255, 68, 68, 0.5);
-    }
+// ============================================================================
+// CALENDÁRIO ACADÊMICO
+// ============================================================================
 
-    .modal-body {
-      padding: 30px;
-    }
+const calendarioAcademico = [
+  { periodo: '1º', modulo: 'A', fase: 'Fase 1', dataEstimada: 'Jan - Fev 2025', observacoes: 'Início do curso' },
+  { periodo: '', modulo: 'A', fase: 'Fase 2', dataEstimada: 'Mar - Abr 2025', observacoes: '' },
+  { periodo: '', modulo: 'B', fase: 'Fase 1', dataEstimada: 'Mai - Jun 2025', observacoes: '' },
+  { periodo: '2º', modulo: 'B', fase: 'Fase 2', dataEstimada: 'Jul - Ago 2025', observacoes: 'Você entrará no 2º período aqui' },
+  { periodo: '', modulo: 'C', fase: 'Fase 1', dataEstimada: 'Set - Out 2025', observacoes: '' },
+  { periodo: '', modulo: 'C', fase: 'Fase 2', dataEstimada: 'Nov - Dez 2025', observacoes: '' },
+  { periodo: '3º', modulo: 'A', fase: 'Fase 1', dataEstimada: 'Jan - Fev 2026', observacoes: 'Você entrará no 3º período aqui' },
+  { periodo: '', modulo: 'A', fase: 'Fase 2', dataEstimada: 'Mar - Abr 2026', observacoes: '' },
+  { periodo: '', modulo: 'B', fase: 'Fase 1', dataEstimada: 'Mai - Jun 2026', observacoes: '' },
+  { periodo: '4º', modulo: 'B', fase: 'Fase 2', dataEstimada: 'Jul - Ago 2026', observacoes: 'Você entrará no 4º período aqui' },
+  { periodo: '', modulo: 'C', fase: 'Fase 1', dataEstimada: 'Set - Out 2026', observacoes: '' },
+  { periodo: '', modulo: 'C', fase: 'Fase 2', dataEstimada: 'Nov - Dez 2026', observacoes: '' },
+  { periodo: '5º', modulo: 'A', fase: 'Fase 1', dataEstimada: 'Jan - Fev 2027', observacoes: 'Você entrará no 5º período aqui' },
+  { periodo: '', modulo: 'A', fase: 'Fase 2', dataEstimada: 'Mar - Abr 2027', observacoes: '' },
+  { periodo: '', modulo: 'B', fase: 'Fase 1', dataEstimada: 'Mai - Jun 2027', observacoes: '' },
+  { periodo: '6º', modulo: 'B', fase: 'Fase 2', dataEstimada: 'Jul - Ago 2027', observacoes: 'Você entrará no 6º período aqui' },
+  { periodo: '', modulo: 'C', fase: 'Fase 1', dataEstimada: 'Set - Out 2027', observacoes: '' },
+  { periodo: '', modulo: 'C', fase: 'Fase 2', dataEstimada: 'Nov - Dez 2027', observacoes: '' },
+  { periodo: '7º', modulo: 'A', fase: 'Fase 1', dataEstimada: 'Jan - Fev 2028', observacoes: 'Você entrará no 7º período aqui' },
+  { periodo: '', modulo: 'A', fase: 'Fase 2', dataEstimada: 'Mar - Abr 2028', observacoes: '' },
+  { periodo: '', modulo: 'B', fase: 'Fase 1', dataEstimada: 'Mai - Jun 2028', observacoes: '' },
+  { periodo: '8º', modulo: 'B', fase: 'Fase 2', dataEstimada: 'Jul - Ago 2028', observacoes: 'Você entrará no 8º período aqui' },
+  { periodo: '', modulo: 'C', fase: 'Fase 1', dataEstimada: 'Set - Out 2028', observacoes: '' },
+  { periodo: '', modulo: 'C', fase: 'Fase 2', dataEstimada: 'Nov - Dez 2028', observacoes: 'Fim das disciplinas' },
+  { periodo: '', modulo: '', fase: '', dataEstimada: '', observacoes: 'Formatura em 2029' }
+];
 
-    .form-group {
-      margin-bottom: 25px;
-      position: relative;
-    }
+function determinarPeriodoAtual() {
+  const agora = new Date();
+  const ano = agora.getFullYear();
+  const mes = agora.getMonth() + 1;
+  
+  if (ano === 2025) {
+    if (mes >= 1 && mes <= 2) return 0;
+    if (mes >= 3 && mes <= 4) return 1;
+    if (mes >= 5 && mes <= 6) return 2;
+    if (mes >= 7 && mes <= 8) return 3;
+    if (mes >= 9 && mes <= 10) return 4;
+    if (mes >= 11 && mes <= 12) return 5;
+  }
+  
+  if (ano > 2025) {
+    const anosDiferenca = ano - 2025;
+    const periodosNoAno = 6;
+    const periodoBase = anosDiferenca * periodosNoAno;
+    
+    if (mes >= 1 && mes <= 2) return periodoBase + 6;
+    if (mes >= 3 && mes <= 4) return periodoBase + 7;
+    if (mes >= 5 && mes <= 6) return periodoBase + 8;
+    if (mes >= 7 && mes <= 8) return periodoBase + 9;
+    if (mes >= 9 && mes <= 10) return periodoBase + 10;
+    if (mes >= 11 && mes <= 12) return periodoBase + 11;
+  }
+  
+  return 0;
+}
 
-    .form-group label {
-      display: block;
-      margin-bottom: 10px;
-      color: #0af;
-      font-weight: 600;
-      font-size: 1rem;
-      text-shadow: 0 0 5px rgba(0, 170, 255, 0.3);
-    }
+function exibirCalendario() {
+  const container = document.createElement('div');
+  container.className = 'calendar-container';
+  
+  const header = document.createElement('div');
+  header.className = 'calendar-header';
+  
+  const title = document.createElement('h1');
+  title.className = 'calendar-title';
+  title.textContent = '📅 Calendário Acadêmico 2025-2029';
+  header.appendChild(title);
 
-    .form-group input,
-    .form-group select {
-      width: 100%;
-      padding: 15px 20px;
-      background: rgba(17, 17, 17, 0.8);
-      border: 2px solid rgba(0, 170, 255, 0.3);
-      border-radius: 12px;
-      color: #0af;
-      font-size: 1rem;
-      transition: all 0.3s ease;
-      box-sizing: border-box;
-      backdrop-filter: blur(10px);
-    }
+  const legend = document.createElement('div');
+  legend.className = 'calendar-legend';
+  legend.innerHTML = `
+    <div class="legend-item legend-current">
+      <span>🟢</span>
+      <span>Período Atual</span>
+    </div>
+    <div class="legend-item legend-future">
+      <span>🔵</span>
+      <span>Período Futuro</span>
+    </div>
+    <div class="legend-item legend-past">
+      <span>🔴</span>
+      <span>Período Passado</span>
+    </div>
+  `;
+  header.appendChild(legend);
+  container.appendChild(header);
 
-    .form-group input:focus,
-    .form-group select:focus {
-      outline: none;
-      border-color: #0af;
-      box-shadow: 
-        0 0 20px rgba(0, 170, 255, 0.4),
-        inset 0 0 10px rgba(0, 170, 255, 0.1);
-      background: rgba(17, 17, 17, 0.9);
-      transform: translateY(-2px);
-    }
+  const table = document.createElement('table');
+  table.className = 'calendar-table';
+  
+  const thead = document.createElement('thead');
+  thead.innerHTML = `
+    <tr>
+      <th>PERÍODO</th>
+      <th>MÓDULO (UTA)</th>
+      <th>FASE</th>
+      <th>PERÍODO ESTIMADO</th>
+      <th>OBSERVAÇÕES</th>
+    </tr>
+  `;
+  table.appendChild(thead);
 
-    .form-group input::placeholder {
-      color: rgba(0, 170, 255, 0.5);
-    }
-
-    .senha-required {
-      border-color: rgba(255, 193, 7, 0.6) !important;
-      background: rgba(255, 193, 7, 0.05);
-    }
-
-    .senha-required label {
-      color: #ffc107;
-      text-shadow: 0 0 5px rgba(255, 193, 7, 0.5);
-    }
-
-    .modal-footer {
-      padding: 25px 30px;
-      border-top: 2px solid rgba(0, 170, 255, 0.3);
-      display: flex;
-      gap: 15px;
-      justify-content: flex-end;
-      background: linear-gradient(135deg, rgba(0, 170, 255, 0.05), rgba(8, 204, 255, 0.02));
-      border-radius: 0 0 17px 17px;
-    }
-
-    .btn {
-      padding: 12px 25px;
-      border: none;
-      border-radius: 10px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      font-size: 1rem;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .btn::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.2);
-      transition: all 0.3s ease;
-      transform: translate(-50%, -50%);
-    }
-
-    .btn:hover::before {
-      width: 100%;
-      height: 100%;
-    }
-
-    .btn-primary {
-      background: linear-gradient(45deg, #0af, #08c);
-      color: #000;
-      box-shadow: 0 5px 15px rgba(0, 170, 255, 0.3);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 25px rgba(0, 170, 255, 0.5);
-      background: linear-gradient(45deg, #08c, #0af);
-    }
-
-    .btn-secondary {
-      background: linear-gradient(45deg, rgba(108, 117, 125, 0.8), rgba(90, 98, 104, 0.8));
-      color: #fff;
-      box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
-    }
-
-    .btn-secondary:hover {
-      background: linear-gradient(45deg, rgba(108, 117, 125, 1), rgba(90, 98, 104, 1));
-      transform: translateY(-3px);
-      box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
-    }
-
-    /* Quiz Grid Styles */
-    .quiz-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 20px;
-      margin-bottom: 30px;
-      padding: 20px 0;
+  const tbody = document.createElement('tbody');
+  const periodoAtualIndex = determinarPeriodoAtual();
+  
+  calendarioAcademico.forEach((item, index) => {
+    const row = document.createElement('tr');
+    
+    let rowClass = '';
+    
+    if (index < periodoAtualIndex) {
+      rowClass = 'past-period';
+    } else if (index === periodoAtualIndex) {
+      rowClass = 'current-period';
+    } else {
+      rowClass = 'future-period';
     }
     
-    .quiz-card-ativo {
-      background: rgba(17, 17, 17, 0.9);
-      border-radius: 15px;
-      box-shadow: 0 8px 25px rgba(0,170,255,0.2);
-      position: relative;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      border: 1px solid rgba(0,170,255,0.3);
-      backdrop-filter: blur(10px);
-      overflow: hidden;
-      min-height: 200px;
+    if (item.periodo && item.periodo !== '') {
+      rowClass += ' period-header';
     }
     
-    .quiz-card-ativo:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 12px 35px rgba(0,170,255,0.4);
-      border-color: #0af;
-    }
-
-    .quiz-thumbnail {
-      position: relative;
-      height: 140px;
-      background: linear-gradient(135deg, #1a1a2e, #16213e);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-bottom: 2px solid rgba(0,170,255,0.3);
-    }
-
-    .quiz-background {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="%23006699" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-      opacity: 0.3;
-    }
-
-    .quiz-play-icon {
-      position: relative;
-      z-index: 2;
-      font-size: 3rem;
-      color: #0af;
-      text-shadow: 0 0 20px #0af;
-      transition: all 0.3s ease;
-    }
-
-    .quiz-card-ativo:hover .quiz-play-icon {
-      transform: scale(1.2);
-      text-shadow: 0 0 30px #0af;
-    }
-
-    .quiz-info {
-      padding: 20px;
-    }
-
-    .quiz-title {
-      font-weight: bold;
-      font-size: 1.3rem;
-      margin-bottom: 15px;
-      color: #0af;
-      text-shadow: 0 0 5px rgba(0,170,255,0.5);
-      text-align: center;
-    }
-
-    .quiz-meta {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.9rem;
-      color: #999;
-    }
-
-    .quiz-actions {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      z-index: 10;
-    }
-
-    .quiz-action-btn {
-      background: rgba(0, 170, 255, 0.8);
-      border: none;
-      border-radius: 50%;
-      width: 35px;
-      height: 35px;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: all 0.3s ease;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 4px 15px rgba(0,170,255,0.4);
-    }
-
-    .quiz-action-btn:hover {
-      background: #0af;
-      transform: rotate(90deg) scale(1.1);
-      box-shadow: 0 6px 20px rgba(0,170,255,0.6);
+    if (index === calendarioAcademico.length - 1) {
+      rowClass = 'completion-info';
     }
     
+    row.className = rowClass;
+    
+    row.innerHTML = `
+      <td>${item.periodo}</td>
+      <td>${item.modulo}</td>
+      <td>${item.fase}</td>
+      <td>${item.dataEstimada}</td>
+      <td>${item.observacoes}</td>
+    `;
+    
+    tbody.appendChild(row);
+  });
+  
+  table.appendChild(tbody);
+  container.appendChild(table);
+
+  const info = document.createElement('div');
+  info.style.marginTop = '30px';
+  info.style.padding = '25px';
+  info.style.background = 'rgba(0,170,255,0.1)';
+  info.style.borderRadius = '15px';
+  info.style.border = '2px solid rgba(0,170,255,0.3)';
+  info.style.textAlign = 'center';
+  info.innerHTML = `
+    <h3 style="color: #0af; margin-bottom: 20px;">ℹ️ Informações do Curso</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; color: #0af;">
+      <div>
+        <strong>📅 Duração Total:</strong><br>
+        4 anos (8 períodos)
+      </div>
+      <div>
+        <strong>🎓 Formatura Prevista:</strong><br>
+        2029
+      </div>
+      <div>
+        <strong>📚 Estrutura:</strong><br>
+        3 módulos por período (A, B, C)
+      </div>
+      <div>
+        <strong>⏱️ Cada Módulo:</strong><br>
+        2 fases (2 meses cada)
+      </div>
+    </div>
+  `;
+  container.appendChild(info);
+
+  quizzesContainer.appendChild(container);
+}
+
+// ============================================================================
+// EXIBIÇÃO DE PERFIL
+// ============================================================================
+
+function exibirPerfil() {
+  console.log('👤 Exibindo perfil do usuário');
+  
+  if (!usuarioLogado) {
+    quizzesContainer.innerHTML = `
+      <div class="error">
+        ❌ Erro: Usuário não encontrado
+      </div>
+    `;
+    return;
+  }
+  
+  const container = document.createElement('div');
+  container.className = 'perfil-form';
+  container.style.maxWidth = '600px';
+  container.style.margin = '0 auto';
+  container.style.background = 'rgba(17, 17, 17, 0.9)';
+  container.style.borderRadius = '15px';
+  container.style.padding = '30px';
+  container.style.boxShadow = '0 8px 25px rgba(0,170,255,0.2)';
+  container.style.border = '1px solid rgba(0,170,255,0.3)';
+  container.style.backdropFilter = 'blur(10px)';
+  
+  container.innerHTML = `
+    <h2 style="text-align: center; margin-bottom: 30px; color: #0af; text-shadow: 0 0 10px rgba(0,170,255,0.5);">
+      👤 Meu Perfil
+    </h2>
+    
+    <div style="text-align: center; margin-bottom: 25px;">
+      <div style="width: 120px; height: 120px; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; background: linear-gradient(45deg, #0af, #08c); color: #000; font-weight: bold; font-size: 3rem; overflow: hidden; border: 4px solid rgba(0,170,255,0.5);">
+        ${usuarioLogado.fotoBase64 ? 
+          `<img src="${usuarioLogado.fotoBase64}" alt="Foto do perfil" style="width: 100%; height: 100%; object-fit: cover;">` : 
+          usuarioLogado.nome.charAt(0).toUpperCase()
+        }
+      </div>
+      <p style="color: #666; font-size: 0.9rem;">Foto do perfil</p>
+    </div>
+
+    <div style="display: grid; gap: 20px;">
+      <div>
+        <label style="display: block; margin-bottom: 8px; color: #0af; font-weight: bold;">Nome:</label>
+        <div style="padding: 12px; background: rgba(34, 34, 34, 0.8); border: 2px solid rgba(0,170,255,0.3); border-radius: 8px; color: #0af;">
+          ${usuarioLogado.nome}
+        </div>
+      </div>
+
+      <div>
+        <label style="display: block; margin-bottom: 8px; color: #0af; font-weight: bold;">Sobrenome:</label>
+        <div style="padding: 12px; background: rgba(34, 34, 34, 0.8); border: 2px solid rgba(0,170,255,0.3); border-radius: 8px; color: #0af;">
+          ${usuarioLogado.sobrenome || 'Não informado'}
+        </div>
+      </div>
+
+      <div>
+        <label style="display: block; margin-bottom: 8px; color: #0af; font-weight: bold;">Usuário:</label>
+        <div style="padding: 12px; background: rgba(34, 34, 34, 0.8); border: 2px solid rgba(0,170,255,0.3); border-radius: 8px; color: #0af;">
+          ${usuarioLogado.usuario}
+        </div>
+      </div>
+
+      <div>
+        <label style="display: block; margin-bottom: 8px; color: #0af; font-weight: bold;">Email:</label>
+        <div style="padding: 12px; background: rgba(34, 34, 34, 0.8); border: 2px solid rgba(0,170,255,0.3); border-radius: 8px; color: #0af;">
+          ${usuarioLogado.email || 'Não informado'}
+        </div>
+      </div>
+
+      <div>
+        <label style="display: block; margin-bottom: 8px; color: #0af; font-weight: bold;">Telefone:</label>
+        <div style="padding: 12px; background: rgba(34, 34, 34, 0.8); border: 2px solid rgba(0,170,255,0.3); border-radius: 8px; color: #0af;">
+          ${usuarioLogado.telefone || 'Não informado'}
+        </div>
+      </div>
+
+      <div>
+        <label style="display: block; margin-bottom: 8px; color: #0af; font-weight: bold;">Tipo de Usuário:</label>
+        <div style="padding: 12px; background: rgba(34, 34, 34, 0.8); border: 2px solid rgba(0,170,255,0.3); border-radius: 8px; color: #0af; text-transform: capitalize;">
+          ${usuarioLogado.tipo}
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+      <p style="color: #666; font-style: italic;">
+        Para editar suas informações, entre em contato com um administrador.
+      </p>
+    </div>
+  `;
+  
+  quizzesContainer.appendChild(container);
+}
+
+// ============================================================================
+// FUNÇÕES AUXILIARES
+// ============================================================================
+
+function mostrarMensagemSucesso(mensagem) {
+  console.log('📢 Sucesso:', mensagem);
+  mensagemSucesso.textContent = mensagem;
+  mensagemSucesso.classList.add('show');
+  
+  setTimeout(() => {
+    mensagemSucesso.classList.remove('show');
+  }, 4000);
+}
+
+function mostrarMensagemErro(mensagem) {
+  console.log('❌ Erro:', mensagem);
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+    color: #fff;
+    padding: 15px 25px;
+    border-radius: 10px;
+    font-weight: bold;
+    box-shadow: 0 8px 25px rgba(255, 68, 68, 0.4);
+    z-index: 1001;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+  `;
+  notification.textContent = mensagem;
+  
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.opacity = '1';
+    notification.style.transform = 'translateX(0)';
+  }, 10);
+  
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    notification.style.transform = 'translateX(100%)';
+    setTimeout(() => notification.remove(), 300);
+  }, 4000);
+}
+
+function mostrarLoading(mensagem = 'Carregando...') {
+  quizzesContainer.innerHTML = `<div class="loading">${mensagem}</div>`;
+}
+
+function esconderLoading() {
+  const loading = document.querySelector('.loading');
+  if (loading) loading.remove();
+}
+
+// ============================================================================
+// INICIALIZAÇÃO PRINCIPAL
+// ============================================================================
+
+async function inicializarSistema() {
+  try {
+    console.log('🚀 Iniciando Dashboard com correções...');
+    
+    mostrarLoading('Verificando autenticação...');
+    const usuarioValido = await verificarUsuarioLogado();
+    if (!usuarioValido) return;
+    
+    mostrarLoading('Configurando interface...');
+    configurarBotoesPrincipais();
+    configurarTabs();
+    
+    if (dashboardManager) {
+      mostrarLoading('Carregando dados do sistema...');
+      await dashboardManager.inicializar();
+    }
+    
+    exibirConteudo();
+    esconderLoading();
+    
+    console.log('✅ Sistema inicializado com sucesso!');
+    console.log('👤 Usuário:', usuarioLogado.usuario, '(' + usuarioLogado.tipo + ')');
+    
+    mostrarMensagemSucesso(`Bem-vindo, ${usuarioLogado.nome}! Dashboard carregado.`);
+    
+  } catch (error) {
+    console.error('❌ Erro na inicialização:', error);
+    quizzesContainer.innerHTML = `
+      <div class="error">
+        <h3>❌ Erro na Inicialização</h3>
+        <p>Erro: ${error.message}</p>
+        <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #0af; border: none; border-radius: 5px; color: #000; font-weight: bold; cursor: pointer;">🔄 Tentar Novamente</button>
+      </div>
+    `;
+  }
+}
+
+// ============================================================================
+// EVENT LISTENERS E INICIALIZAÇÃO
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('📄 DOM carregado, iniciando sistema...');
+  
+  const aguardarScripts = () => {
+    return new Promise((resolve) => {
+      const verificarScripts = () => {
+        if (typeof authManager !== 'undefined' && typeof dashboardManager !== 'undefined') {
+          resolve();
+        } else {
+          setTimeout(verificarScripts, 100);
+        }
+      };
+      verificarScripts();
+    });
+  };
+  
+  aguardarScripts().then(() => {
+    criarParticulas();
+    inicializarSistema();
+  });
+});
+
+// Fechar menus dropdown ao clicar fora
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.quiz-action-btn') && !e.target.closest('.quiz-menu-dropdown')) {
+    document.querySelectorAll('.quiz-menu-dropdown').forEach(menu => {
+      menu.remove();
+    });
+  }
+});
+
+console.log('🎯 DASHBOARD HTML COMPLETO COM TODAS AS CORREÇÕES IMPLEMENTADAS!');
+
+</script>
+</body>
+</html>
