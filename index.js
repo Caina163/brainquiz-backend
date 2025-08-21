@@ -30,6 +30,37 @@ app.use(limiter);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// ===== CONFIGURAÇÕES PARA SERVIR ARQUIVOS ESTÁTICOS =====
+
+// Servir arquivos estáticos (CSS, JS, imagens, etc.)
+app.use(express.static(__dirname));
+
+// Rota principal - servir index.html
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'), (err) => {
+    if (err) {
+      console.error('Erro ao servir index.html:', err);
+      res.status(404).send('Página não encontrada');
+    }
+  });
+});
+
+// Servir arquivos HTML específicos
+app.get('/*.html', (req, res) => {
+  const fileName = req.params[0] + '.html';
+  const filePath = path.join(__dirname, fileName);
+  
+  // Verificar se o arquivo existe antes de tentar servir
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    // Se arquivo não existe, redirecionar para index.html
+    res.sendFile(path.join(__dirname, 'index.html'));
+  }
+});
+
+// ===== FIM DAS CONFIGURAÇÕES DE ARQUIVOS ESTÁTICOS =====
+
 // Configuração do multer
 const storage = multer.memoryStorage();
 const upload = multer({ 
@@ -91,7 +122,7 @@ function autenticarToken(req, res, next) {
   });
 }
 
-// ROTAS
+// ROTAS DE AUTENTICAÇÃO
 
 // Login
 app.post('/login', async (req, res) => {
@@ -254,7 +285,8 @@ app.post('/cadastro', async (req, res) => {
   }
 });
 
-// APIs
+// ROTAS DA API
+
 app.get('/api/usuarios', autenticarToken, (req, res) => {
   try {
     const usuarios = lerArquivoJSON('usuarios.json', []);
@@ -366,17 +398,31 @@ app.use((error, req, res, next) => {
   });
 });
 
-// 404
+// 404 - IMPORTANTE: Esta rota deve ficar por último
 app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Endpoint não encontrado'
+  // Se for uma requisição para API, retornar JSON
+  if (req.originalUrl.startsWith('/api/')) {
+    return res.status(404).json({
+      success: false,
+      message: 'Endpoint não encontrado'
+    });
+  }
+  
+  // Para todas as outras rotas, servir index.html (para SPA)
+  res.sendFile(path.join(__dirname, 'index.html'), (err) => {
+    if (err) {
+      res.status(404).json({
+        success: false,
+        message: 'Página não encontrada'
+      });
+    }
   });
 });
 
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
   console.log(`🔒 JWT Secret configurado`);
+  console.log(`📁 Servindo arquivos estáticos do diretório: ${__dirname}`);
   
   // Criar arquivos JSON se não existirem
   const arquivos = ['usuarios.json', 'pdfs.json', 'quizzes.json', 'cadastros_pendentes.json', 'quizzes_arquivados.json', 'quizzes_excluidos.json'];
@@ -387,4 +433,12 @@ app.listen(PORT, () => {
       console.log(`📄 Arquivo ${arquivo} criado`);
     }
   });
+  
+  // Verificar se index.html existe
+  const indexPath = path.join(__dirname, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    console.log(`✅ index.html encontrado`);
+  } else {
+    console.log(`⚠️  index.html não encontrado em ${indexPath}`);
+  }
 });
